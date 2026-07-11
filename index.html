@@ -3,73 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>南海列車位置</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <header>
         <h1>🚃 南海列車位置</h1>
         <p id="updateTime">更新中...</p>
+
+        <button id="versionBtn" type="button">
+            📜 更新履歴
+        </button>
     </header>
 
     <main>
-        <div id="line">
-        </div>
+        <div id="line"></div>
     </main>
+
     <div id="detailPanel">
-
-    <button id="closeButton">×</button>
-
-    <div id="detailContent">
-
+        <button id="closeButton" type="button">×</button>
+        <div id="detailContent"></div>
     </div>
 
-</div>
+    <dialog id="versionModal">
+        <div class="version-header">
+            <h2>📜 更新履歴</h2>
 
+            <button id="closeModal" type="button">
+                ×
+            </button>
+        </div>
 
+        <p>
+            <b>Ver 1.0.2</b><br>
+            ・Render API対応<br>
+            ・スマホ対応
+        </p>
 
-<script src="api.js"></script>
-<script src="ui.js"></script>
-<script type="module" src="script.js"></script>
-</div>
+        <p>
+            <b>Ver 1.0.1</b><br>
+            ・列車詳細画面追加
+        </p>
 
+        <p>
+            <b>Ver 1.0.0</b><br>
+            ・南海トラッカー公開
+        </p>
+    </dialog>
 
-<div id="detailPanel">
-    <button id="closeButton" type="button">×</button>
-
-    <div id="detailContent"></div>
-</div>
-
-<button id="versionBtn" type="button">📜 更新履歴</button>
-
-<dialog id="versionModal">
-    <div class="version-header">
-        <h2>📜 更新履歴</h2>
-        <button id="closeModal" type="button">×</button>
-    </div>
-
-    <p>
-        <b>Ver 1.0.2</b><br>
-        ・Render API対応<br>
-        ・スマホ対応
-    </p>
-
-    <p>
-        <b>Ver 1.0.1</b><br>
-        ・列車詳細画面追加
-    </p>
-
-    <p>
-        <b>Ver 1.0.0</b><br>
-        ・南海トラッカー公開
-    </p>
-</dialog>
-
-<script src="api.js"></script>
-<script src="ui.js"></script>
-<script type="module" src="script.js"></script>
+    <script src="api.js"></script>
+    <script src="ui.js"></script>
+    <script type="module" src="script.js"></script>
 
 </body>
 </html>
