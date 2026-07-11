@@ -1,17 +1,22 @@
 async function getTrainData() {
-    const response = await fetch("https://external-data.nankaiapp.com/tid/trains.json");
+    const response = await fetch(
+        "https://external-data.nankaiapp.com/tid/trains.json"
+    );
     return await response.json();
 }
 
 async function getLineData() {
-    const response = await fetch("https://external-data.nankaiapp.com/line/lines.json");
+    const response = await fetch(
+        "https://external-data.nankaiapp.com/line/lines.json"
+    );
     return await response.json();
 }
+
 async function getTrainDetail(trainNumber) {
     const baseTime = window.koyaBaseTime || "00:00:00";
 
     const url =
-        `http://localhost:3000/api/train` +
+        `https://nankaitracker.onrender.com/api/train` +
         `?train_number=${encodeURIComponent(trainNumber)}` +
         `&dia_kind=2` +
         `&interface_no=1` +

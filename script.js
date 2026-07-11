@@ -55,3 +55,15 @@ showTrains(trainData, koyaStationIds);
 }
 
 loadApp();
+
+const modal = document.getElementById("versionModal");
+
+document.getElementById("versionBtn")
+.addEventListener("click", () => {
+    modal.style.display = "block";
+});
+
+document.getElementById("closeModal")
+.addEventListener("click", () => {
+    modal.style.display = "none";
+});
