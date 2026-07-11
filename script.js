@@ -57,13 +57,22 @@ showTrains(trainData, koyaStationIds);
 loadApp();
 
 const modal = document.getElementById("versionModal");
+const versionBtn = document.getElementById("versionBtn");
+const closeModal = document.getElementById("closeModal");
 
-document.getElementById("versionBtn")
-.addEventListener("click", () => {
+versionBtn.addEventListener("click", () => {
+    modal.hidden = false;
     modal.style.display = "block";
 });
 
-document.getElementById("closeModal")
-.addEventListener("click", () => {
+closeModal.addEventListener("click", () => {
+    modal.hidden = true;
     modal.style.display = "none";
+});
+
+modal.addEventListener("click", event => {
+    if (event.target === modal) {
+        modal.hidden = true;
+        modal.style.display = "none";
+    }
 });
