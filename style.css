@@ -229,18 +229,33 @@ h1 {
     top: 0;
 }
 
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
+#versionModal {
+    width: 500px;
+    max-width: calc(100% - 40px);
+    max-height: 80vh;
+    padding: 20px;
+    border: none;
+    border-radius: 12px;
+    overflow-y: auto;
 }
 
-.modal-content {
-    background: white;
-    width: 500px;
-    max-width: 90%;
-    margin: 100px auto;
-    padding: 20px;
-    border-radius: 10px;
+#versionModal::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.version-header h2 {
+    margin: 0;
+}
+
+#closeModal {
+    border: none;
+    background: none;
+    font-size: 28px;
+    cursor: pointer;
 }

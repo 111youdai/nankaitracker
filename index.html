@@ -44,29 +44,28 @@
 
 <button id="versionBtn" type="button">📜 更新履歴</button>
 
-<div id="versionModal" class="modal" hidden>
-    <div class="modal-content">
-        <button id="closeModal" type="button">✖</button>
-
+<dialog id="versionModal">
+    <div class="version-header">
         <h2>📜 更新履歴</h2>
-
-        <p>
-            <b>Ver 1.0.2</b><br>
-            ・Render API対応<br>
-            ・スマホ対応
-        </p>
-
-        <p>
-            <b>Ver 1.0.1</b><br>
-            ・列車詳細画面追加
-        </p>
-
-        <p>
-            <b>Ver 1.0.0</b><br>
-            ・公開
-        </p>
+        <button id="closeModal" type="button">×</button>
     </div>
-</div>
+
+    <p>
+        <b>Ver 1.0.2</b><br>
+        ・Render API対応<br>
+        ・スマホ対応
+    </p>
+
+    <p>
+        <b>Ver 1.0.1</b><br>
+        ・列車詳細画面追加
+    </p>
+
+    <p>
+        <b>Ver 1.0.0</b><br>
+        ・南海トラッカー公開
+    </p>
+</dialog>
 
 <script src="api.js"></script>
 <script src="ui.js"></script>

@@ -56,23 +56,20 @@ showTrains(trainData, koyaStationIds);
 
 loadApp();
 
-const modal = document.getElementById("versionModal");
+const versionModal = document.getElementById("versionModal");
 const versionBtn = document.getElementById("versionBtn");
-const closeModal = document.getElementById("closeModal");
+const closeModalBtn = document.getElementById("closeModal");
 
 versionBtn.addEventListener("click", () => {
-    modal.hidden = false;
-    modal.style.display = "block";
+    versionModal.showModal();
 });
 
-closeModal.addEventListener("click", () => {
-    modal.hidden = true;
-    modal.style.display = "none";
+closeModalBtn.addEventListener("click", () => {
+    versionModal.close();
 });
 
-modal.addEventListener("click", event => {
-    if (event.target === modal) {
-        modal.hidden = true;
-        modal.style.display = "none";
+versionModal.addEventListener("click", event => {
+    if (event.target === versionModal) {
+        versionModal.close();
     }
 });
