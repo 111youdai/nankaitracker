@@ -59,31 +59,33 @@ function showTrains(trainData, stationIds) {
             openDetail(train);
         };
 
-        const cars = train.car_numbers
-            .filter(car => car !== 0)
-            .join(" + ");
+        const cars = Array.isArray(train.car_numbers)
+            ? train.car_numbers
+                .filter(car => car !== 0)
+                .join(" + ")
+            : "";
 
         const kindInfo = window.getTrainKindByNumber(
-    2,
-    train.train_number
-);
+            2,
+            train.train_number
+        );
 
-const trainType =
-    kindInfo?.train_type || "種別不明";
+        const trainType =
+            kindInfo?.train_type || "種別不明";
 
-trainElement.innerHTML = `
-    <div class="train-kind">
-        ${trainType}
-    </div>
+        trainElement.innerHTML = `
+            <div class="train-kind">
+                ${trainType}
+            </div>
 
-    <div class="train-number">
-        ${train.train_number}
-    </div>
+            <div class="train-number">
+                ${train.train_number}
+            </div>
 
-    <div class="train-cars">
-        ${cars || "編成不明"}
-    </div>
-`;
+            <div class="train-cars">
+                ${cars || "編成不明"}
+            </div>
+        `;
 
         target.appendChild(trainElement);
     });
@@ -159,44 +161,6 @@ async function openDetail(train) {
             train.train_number,
             detail
         );
-        const detailStations =
-    Array.isArray(detail.station_infos)
-        ? detail.station_infos.map(
-            station => station.station_name
-        )
-        : [];
-
-const currentStation =
-    window.stationMap[train.station_id];
-
-const nextStation =
-    train.next_station_id == null
-        ? null
-        : window.stationMap[train.next_station_id];
-
-const matchesCurrentPosition =
-    detailStations.includes(currentStation) ||
-    (nextStation && detailStations.includes(nextStation));
-
-if (!matchesCurrentPosition) {
-    throw new Error(
-        "別ダイヤの時刻表が返されたため表示しません"
-    );
-}
-const fallbackSectionText =
-    kindInfo?.section || "";
-
-const matchesSection =
-    !departure ||
-    !arrival ||
-    fallbackSectionText.includes(departure) ||
-    fallbackSectionText.includes(arrival);
-
-if (!matchesCurrentPosition && !matchesSection) {
-    throw new Error(
-        "別ダイヤの時刻表が返されたため表示しません"
-    );
-}
 
         const stationList =
             Array.isArray(detail.station_infos)
@@ -324,8 +288,8 @@ if (!matchesCurrentPosition && !matchesSection) {
             <hr>
 
             <p class="detail-error">
-    この列車は停車駅・時刻を取得できません。
-</p>
+                この列車は停車駅・時刻を取得できません。
+            </p>
         `;
     }
 
