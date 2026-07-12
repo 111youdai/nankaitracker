@@ -2,6 +2,11 @@ async function getTrainData() {
     const response = await fetch(
         "https://external-data.nankaiapp.com/tid/trains.json"
     );
+
+    if (!response.ok) {
+        throw new Error(`列車位置APIエラー: ${response.status}`);
+    }
+
     return await response.json();
 }
 
@@ -9,10 +14,15 @@ async function getLineData() {
     const response = await fetch(
         "https://external-data.nankaiapp.com/line/lines.json"
     );
+
+    if (!response.ok) {
+        throw new Error(`路線APIエラー: ${response.status}`);
+    }
+
     return await response.json();
 }
 
-aasync function getTrainDetail(trainNumber) {
+async function getTrainDetail(trainNumber) {
     const baseTime =
         window.koyaBaseTime || "00:00:00";
 
@@ -30,6 +40,7 @@ aasync function getTrainDetail(trainNumber) {
     });
 
     const response = await fetch(url);
+
     const data = await response.json();
 
     if (!response.ok) {
