@@ -183,12 +183,6 @@ if (!matchesCurrentPosition) {
         "別ダイヤの時刻表が返されたため表示しません"
     );
 }
-const departure =
-    detail.departure_station_name;
-
-const arrival =
-    detail.arrival_station_name;
-
 const fallbackSectionText =
     kindInfo?.section || "";
 
