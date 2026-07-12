@@ -30,26 +30,15 @@ async function getTrainDetail(trainNumber) {
     const baseTime =
         window.koyaBaseTime || "00:00:00";
 
-    const diaKind =
-        window.koyaDiaKind || 2;
-
     const url =
         `https://nankaitracker.onrender.com/api/train` +
         `?train_number=${encodeURIComponent(trainNumber)}` +
-        `&dia_kind=${encodeURIComponent(diaKind)}` +
+        `&dia_kind=2` +
         `&interface_no=1` +
         `&base_time=${encodeURIComponent(baseTime)}`;
 
-    console.log(
-        "diaKind=",
-        diaKind,
-        "baseTime=",
-        baseTime
-    );
-
     console.log("詳細APIリクエスト", {
         trainNumber,
-        diaKind,
         baseTime,
         url
     });

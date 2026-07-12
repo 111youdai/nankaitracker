@@ -159,6 +159,50 @@ async function openDetail(train) {
             train.train_number,
             detail
         );
+        const detailStations =
+    Array.isArray(detail.station_infos)
+        ? detail.station_infos.map(
+            station => station.station_name
+        )
+        : [];
+
+const currentStation =
+    window.stationMap[train.station_id];
+
+const nextStation =
+    train.next_station_id == null
+        ? null
+        : window.stationMap[train.next_station_id];
+
+const matchesCurrentPosition =
+    detailStations.includes(currentStation) ||
+    (nextStation && detailStations.includes(nextStation));
+
+if (!matchesCurrentPosition) {
+    throw new Error(
+        "別ダイヤの時刻表が返されたため表示しません"
+    );
+}
+const departure =
+    detail.departure_station_name;
+
+const arrival =
+    detail.arrival_station_name;
+
+const fallbackSectionText =
+    kindInfo?.section || "";
+
+const matchesSection =
+    !departure ||
+    !arrival ||
+    fallbackSectionText.includes(departure) ||
+    fallbackSectionText.includes(arrival);
+
+if (!matchesCurrentPosition && !matchesSection) {
+    throw new Error(
+        "別ダイヤの時刻表が返されたため表示しません"
+    );
+}
 
         const stationList =
             Array.isArray(detail.station_infos)
