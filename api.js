@@ -12,23 +12,19 @@ async function getLineData() {
     return await response.json();
 }
 
-async function getTrainDetail(trainNumber) {
+aasync function getTrainDetail(trainNumber) {
     const baseTime =
         window.koyaBaseTime || "00:00:00";
-
-    const diaKind =
-        window.koyaDiaKind || 1;
 
     const url =
         `https://nankaitracker.onrender.com/api/train` +
         `?train_number=${encodeURIComponent(trainNumber)}` +
-        `&dia_kind=${encodeURIComponent(diaKind)}` +
+        `&dia_kind=2` +
         `&interface_no=1` +
         `&base_time=${encodeURIComponent(baseTime)}`;
 
     console.log("詳細APIリクエスト", {
         trainNumber,
-        diaKind,
         baseTime,
         url
     });
