@@ -286,8 +286,8 @@ async function openDetail(train) {
             <hr>
 
             <p class="detail-error">
-                ${error.message}
-            </p>
+    この列車は停車駅・時刻を取得できません。
+</p>
         `;
     }
 

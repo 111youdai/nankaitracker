@@ -13,14 +13,25 @@ async function getLineData() {
 }
 
 async function getTrainDetail(trainNumber) {
-    const baseTime = window.koyaBaseTime || "00:00:00";
+    const baseTime =
+        window.koyaBaseTime || "00:00:00";
+
+    const diaKind =
+        window.koyaDiaKind || 1;
 
     const url =
         `https://nankaitracker.onrender.com/api/train` +
         `?train_number=${encodeURIComponent(trainNumber)}` +
-        `&dia_kind=2` +
+        `&dia_kind=${encodeURIComponent(diaKind)}` +
         `&interface_no=1` +
         `&base_time=${encodeURIComponent(baseTime)}`;
+
+    console.log("詳細APIリクエスト", {
+        trainNumber,
+        diaKind,
+        baseTime,
+        url
+    });
 
     const response = await fetch(url);
     const data = await response.json();
@@ -35,7 +46,8 @@ async function getTrainDetail(trainNumber) {
 
     if (data.result === "NG") {
         throw new Error(
-            data.error_message || "列車詳細を取得できませんでした"
+            data.error_message ||
+            "この列車の時刻情報は取得できません"
         );
     }
 
