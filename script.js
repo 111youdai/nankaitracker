@@ -30,6 +30,7 @@ async function loadApp() {
         const koyaLine = lineData.lines.find(
     line => line.name_ja === "高野線"
 );
+console.log(lineData.lines);
 
 // 高野線の駅だけで駅名対応表を作る
 window.stationMap = {};
