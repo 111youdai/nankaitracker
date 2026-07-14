@@ -3,75 +3,293 @@ function showUpdateTime(trainData) {
         `${trainData.koya_update_date} ${trainData.koya_update_time}`;
 }
 
-function showStations(line) {
-    const lineElement = document.getElementById("line");
+function getStationNumber(station) {
+    if (station.name_ja === "中百舌鳥") {
+        return "NK59";
+    }
+
+    if (station.id >= 152 && station.id <= 156) {
+        return `NK${station.id - 64}`;
+    }
+
+    return `NK${station.eki_number}`;
+}
+
+function createStationElement(station, extraClass = "") {
+    const stationElement =
+        document.createElement("div");
+
+    stationElement.className =
+        `station-row ${extraClass}`.trim();
+
+    stationElement.id =
+        `station-${station.id}`;
+
+    stationElement.innerHTML = `
+        <div class="up-track"></div>
+
+        <div class="station-center">
+            <div class="track"></div>
+
+            <div class="station-name">
+                ${station.name_ja}
+            </div>
+
+            <div class="station-number">
+                ${getStationNumber(station)}
+            </div>
+        </div>
+
+        <div class="down-track"></div>
+    `;
+
+    return stationElement;
+}
+
+function showStations(koyaLine, sembokuStations) {
+    const lineElement =
+        document.getElementById("line");
 
     lineElement.innerHTML = "";
 
-    line.stations.forEach(station => {
-        const stationElement = document.createElement("div");
+    const routeContainer =
+        document.createElement("div");
 
-        stationElement.className = "station-row";
-        stationElement.id = `station-${station.id}`;
+    routeContainer.className =
+        "route-container";
 
-        stationElement.innerHTML = `
-            <div class="up-track"></div>
+    const koyaColumn =
+        document.createElement("div");
 
-            <div class="station-center">
-                <div class="track"></div>
-                <div class="station-name">${station.name_ja}</div>
-                <div class="station-number">NK${station.eki_number}</div>
-            </div>
+    koyaColumn.className =
+        "koya-column";
 
-            <div class="down-track"></div>
-        `;
-
-        lineElement.appendChild(stationElement);
+    koyaLine.stations.forEach(station => {
+        koyaColumn.appendChild(
+            createStationElement(station)
+        );
     });
+
+    routeContainer.appendChild(koyaColumn);
+    lineElement.appendChild(routeContainer);
+
+    const nakamozuStation =
+        koyaLine.stations.find(
+            station =>
+                station.name_ja === "中百舌鳥"
+        );
+
+    if (!nakamozuStation) {
+        console.error(
+            "中百舌鳥が見つかりません"
+        );
+        return;
+    }
+
+    const nakamozuRow =
+        document.getElementById(
+            `station-${nakamozuStation.id}`
+        );
+
+    if (!nakamozuRow) {
+        console.error(
+            "中百舌鳥の駅表示が見つかりません"
+        );
+        return;
+    }
+
+    nakamozuRow.style.position =
+        "relative";
+
+    const branchConnector =
+        document.createElement("div");
+
+    branchConnector.style.position =
+        "absolute";
+
+    branchConnector.style.top =
+        "50%";
+
+    branchConnector.style.left =
+        "60%";
+
+    branchConnector.style.width =
+        "180px";
+
+    branchConnector.style.height =
+        "4px";
+
+    branchConnector.style.background =
+        "#666";
+
+    branchConnector.style.transform =
+        "translateY(-50%)";
+
+    branchConnector.style.zIndex =
+        "1";
+
+    const arrow =
+        document.createElement("div");
+
+    arrow.style.position =
+        "absolute";
+
+    arrow.style.right =
+        "0";
+
+    arrow.style.top =
+        "-5px";
+
+    arrow.style.width =
+        "10px";
+
+    arrow.style.height =
+        "10px";
+
+    arrow.style.borderTop =
+        "4px solid #666";
+
+    arrow.style.borderRight =
+        "4px solid #666";
+
+    arrow.style.transform =
+        "rotate(45deg)";
+
+    branchConnector.appendChild(arrow);
+
+    const sembokuColumn =
+        document.createElement("div");
+
+    sembokuColumn.style.position =
+        "absolute";
+
+    sembokuColumn.style.top =
+        "78px";
+
+        sembokuColumn.style.left =
+    "70%";
+
+    sembokuColumn.style.width =
+        "500px";
+
+    sembokuColumn.style.zIndex =
+        "2";
+
+    sembokuStations
+        .filter(station => station.id !== 151)
+        .forEach(station => {
+            sembokuColumn.appendChild(
+                createStationElement(
+                    station,
+                    "semboku-station"
+                )
+            );
+        });
+
+    nakamozuRow.appendChild(
+        branchConnector
+    );
+
+    nakamozuRow.appendChild(
+        sembokuColumn
+    );
 }
 
 function showTrains(trainData, stationIds) {
+    const visibleStationIds =
+        stationIds.map(id => String(id));
+
     trainData.trains.forEach(train => {
+        const currentStationId =
+            String(train.station_id);
+
+        const nextStationId =
+            train.next_station_id == null
+                ? null
+                : String(train.next_station_id);
+
         const isVisible =
-            stationIds.includes(train.station_id) ||
-            stationIds.includes(train.next_station_id);
+            visibleStationIds.includes(
+                currentStationId
+            ) ||
+            (
+                nextStationId !== null &&
+                visibleStationIds.includes(
+                    nextStationId
+                )
+            );
 
-        if (!isVisible) return;
+        if (!isVisible) {
+            return;
+        }
 
-        const stationElement = document.getElementById(
-            `station-${train.station_id}`
-        );
+        const stationElement =
+            document.getElementById(
+                `station-${currentStationId}`
+            );
 
-        if (!stationElement) return;
+        if (!stationElement) {
+            console.warn(
+                "列車を置く駅が見つかりません",
+                train.train_number,
+                currentStationId
+            );
+            return;
+        }
 
         const target =
             train.direction === "up"
-                ? stationElement.querySelector(".up-track")
-                : stationElement.querySelector(".down-track");
+                ? stationElement.querySelector(
+                    ".up-track"
+                )
+                : stationElement.querySelector(
+                    ".down-track"
+                );
 
-        if (!target) return;
+        if (!target) {
+            return;
+        }
 
-        const trainElement = document.createElement("div");
+        const trainElement =
+            document.createElement("div");
 
-        trainElement.className = "train";
+        trainElement.className =
+            "train";
 
         trainElement.onclick = () => {
             openDetail(train);
         };
 
-        const cars = Array.isArray(train.car_numbers)
-            ? train.car_numbers
-                .filter(car => car !== 0)
-                .join(" + ")
-            : "";
+        const cars =
+            Array.isArray(
+                train.car_numbers
+            )
+                ? train.car_numbers
+                    .filter(car => car !== 0)
+                    .join(" + ")
+                : "";
 
-        const kindInfo = window.getTrainKindByNumber(
-            2,
-            train.train_number
-        );
+        let trainType =
+            "種別不明";
 
-        const trainType =
-            kindInfo?.train_type || "種別不明";
+        try {
+            const kindInfo =
+                window.getTrainKindByNumber(
+                    2,
+                    train.train_number
+                );
+
+            trainType =
+                kindInfo?.train_type ||
+                "種別不明";
+
+        } catch (error) {
+            console.warn(
+                "列車種別の取得失敗",
+                train.train_number,
+                error
+            );
+        }
 
         trainElement.innerHTML = `
             <div class="train-kind">
@@ -87,56 +305,84 @@ function showTrains(trainData, stationIds) {
             </div>
         `;
 
-        target.appendChild(trainElement);
+        target.appendChild(
+            trainElement
+        );
     });
 }
 
 async function openDetail(train) {
-    const panel = document.getElementById("detailPanel");
-    const content = document.getElementById("detailContent");
+    const panel =
+        document.getElementById(
+            "detailPanel"
+        );
 
-    if (!panel || !content) return;
+    const content =
+        document.getElementById(
+            "detailContent"
+        );
 
-    const cars = Array.isArray(train.car_numbers)
-        ? train.car_numbers
-            .filter(car => car !== 0)
-            .join(" + ")
-        : "";
+    if (!panel || !content) {
+        return;
+    }
 
-    const carCounts = Array.isArray(train.car_counts)
-        ? train.car_counts
-            .filter(count => count !== 0)
-            .join(" + ")
-        : "";
+    const cars =
+        Array.isArray(
+            train.car_numbers
+        )
+            ? train.car_numbers
+                .filter(car => car !== 0)
+                .join(" + ")
+            : "";
 
-    const doorCounts = Array.isArray(train.door_counts)
-        ? train.door_counts
-            .filter(count => count !== 0)
-            .join(" + ")
-        : "";
+    const carCounts =
+        Array.isArray(
+            train.car_counts
+        )
+            ? train.car_counts
+                .filter(count => count !== 0)
+                .join(" + ")
+            : "";
+
+    const doorCounts =
+        Array.isArray(
+            train.door_counts
+        )
+            ? train.door_counts
+                .filter(count => count !== 0)
+                .join(" + ")
+            : "";
 
     const current =
-        window.stationMap[train.station_id] || "位置不明";
+        window.stationMap[
+            train.station_id
+        ] || "位置不明";
 
     const next =
         train.next_station_id == null
             ? null
-            : window.stationMap[train.next_station_id] || "次駅不明";
+            : window.stationMap[
+                train.next_station_id
+            ] || "次駅不明";
 
-    const positionText = next
-        ? `${current} → ${next}`
-        : `${current} 停車中`;
+    const positionText =
+        next
+            ? `${current} → ${next}`
+            : `${current} 停車中`;
 
-    const kindInfo = window.getTrainKindByNumber(
-        2,
-        train.train_number
-    );
+    const kindInfo =
+        window.getTrainKindByNumber(
+            2,
+            train.train_number
+        );
 
     const fallbackTrainType =
-        kindInfo?.train_type || "種別不明";
+        kindInfo?.train_type ||
+        "種別不明";
 
     const fallbackSection =
-        kindInfo?.section || "運転区間不明";
+        kindInfo?.section ||
+        "運転区間不明";
 
     const delay =
         train.delay_minutes ??
@@ -152,9 +398,10 @@ async function openDetail(train) {
     `;
 
     try {
-        const detail = await getTrainDetail(
-            train.train_number
-        );
+        const detail =
+            await getTrainDetail(
+                train.train_number
+            );
 
         console.log(
             "詳細取得成功",
@@ -163,7 +410,9 @@ async function openDetail(train) {
         );
 
         const stationList =
-            Array.isArray(detail.station_infos)
+            Array.isArray(
+                detail.station_infos
+            )
                 ? detail.station_infos
                     .map(station => `
                         <tr>
@@ -215,9 +464,11 @@ async function openDetail(train) {
 
             <p><b>方向</b></p>
             <p>
-                ${train.direction === "up"
-                    ? "上り"
-                    : "下り"}
+                ${
+                    train.direction === "up"
+                        ? "上り"
+                        : "下り"
+                }
             </p>
 
             <p><b>現在位置</b></p>
@@ -277,9 +528,11 @@ async function openDetail(train) {
 
             <p><b>方向</b></p>
             <p>
-                ${train.direction === "up"
-                    ? "上り"
-                    : "下り"}
+                ${
+                    train.direction === "up"
+                        ? "上り"
+                        : "下り"
+                }
             </p>
 
             <p><b>現在位置</b></p>
@@ -294,11 +547,15 @@ async function openDetail(train) {
     }
 
     const closeButton =
-        document.getElementById("closeButton");
+        document.getElementById(
+            "closeButton"
+        );
 
     if (closeButton) {
         closeButton.onclick = () => {
-            panel.classList.remove("open");
+            panel.classList.remove(
+                "open"
+            );
         };
     }
 }

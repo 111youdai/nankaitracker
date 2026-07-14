@@ -8,51 +8,86 @@ window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
 window.resolveTrainKind = resolveTrainKind;
 async function loadApp() {
-
     try {
-
         const trainData = await getTrainData();
         const lineData = await getLineData();
 
-        // ←ここで駅ID→駅名の対応表を作る
-        window.stationMap = {};
+        window.koyaDiaKind =
+            trainData.koya_schedule_types;
 
-        lineData.lines.forEach(line => {
-            line.stations.forEach(station => {
-                window.stationMap[station.id] = station.name_ja;
-            });
-        });
-        window.koyaDiaKind = trainData.koya_schedule_types;
-        window.koyaBaseTime = trainData.koya_update_time;
+        window.koyaBaseTime =
+            trainData.koya_update_time;
 
         showUpdateTime(trainData);
 
         const koyaLine = lineData.lines.find(
-    line => line.name_ja === "高野線"
-);
-console.log(lineData.lines);
+            line => line.name_ja === "高野線"
+        );
 
-// 高野線の駅だけで駅名対応表を作る
-window.stationMap = {};
+        const koyaBranchLine = lineData.lines.find(
+            line => line.name_ja === "高野支線"
+        );
 
-koyaLine.stations.forEach(station => {
-    window.stationMap[station.id] = station.name_ja;
-});
+        if (!koyaLine) {
+            throw new Error("高野線が見つかりません");
+        }
 
-showStations(koyaLine);
+        if (!koyaBranchLine) {
+            throw new Error("高野支線が見つかりません");
+        }
 
-const koyaStationIds = koyaLine.stations.map(
-    station => station.id
-);
+        const sembokuStations =
+            koyaBranchLine.stations.filter(
+                station =>
+                    station.id >= 151 &&
+                    station.id <= 156
+            );
 
-showTrains(trainData, koyaStationIds);
+        console.log("泉北駅", sembokuStations);
+
+        // 駅ID → 駅名
+        window.stationMap = {};
+
+        koyaLine.stations.forEach(station => {
+            window.stationMap[station.id] =
+                station.name_ja;
+        });
+
+        sembokuStations.forEach(station => {
+            window.stationMap[station.id] =
+                station.name_ja;
+        });
+
+        showStations(
+            koyaLine,
+            sembokuStations
+        );
+
+        const koyaStationIds =
+            koyaLine.stations.map(
+                station => station.id
+            );
+
+        const sembokuStationIds =
+            sembokuStations.map(
+                station => station.id
+            );
+
+        const visibleStationIds = [
+            ...new Set([
+                ...koyaStationIds,
+                ...sembokuStationIds
+            ])
+        ];
+
+        showTrains(
+            trainData,
+            visibleStationIds
+        );
 
     } catch (error) {
-
-        console.error(error);
-
+        console.error("loadAppエラー:", error);
     }
-
 }
 
 loadApp();
