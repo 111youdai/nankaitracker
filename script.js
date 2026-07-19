@@ -1,12 +1,19 @@
 import {
     getTrainKindByNumber,
     getTrainKindById,
-    resolveTrainKind
+    resolveTrainKind,
+    isSembokuService,
+    isLimitedExpressTrain,
+    analyzeTrainFormation
 } from "./train-kind.js";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
 window.resolveTrainKind = resolveTrainKind;
+window.isSembokuService = isSembokuService;
+window.isLimitedExpressTrain = isLimitedExpressTrain;
+window.analyzeTrainFormation = analyzeTrainFormation;
+
 async function loadApp() {
     try {
         const trainData = await getTrainData();
@@ -39,11 +46,9 @@ async function loadApp() {
         const sembokuStations =
             koyaBranchLine.stations.filter(
                 station =>
-                    station.id >= 151 &&
-                    station.id <= 156
+                    Number(station.id) >= 151 &&
+                    Number(station.id) <= 156
             );
-
-        console.log("泉北駅", sembokuStations);
 
         // 駅ID → 駅名
         window.stationMap = {};
@@ -65,12 +70,12 @@ async function loadApp() {
 
         const koyaStationIds =
             koyaLine.stations.map(
-                station => station.id
+                station => Number(station.id)
             );
 
         const sembokuStationIds =
             sembokuStations.map(
-                station => station.id
+                station => Number(station.id)
             );
 
         const visibleStationIds = [
@@ -92,20 +97,31 @@ async function loadApp() {
 
 loadApp();
 
-const versionModal = document.getElementById("versionModal");
-const versionBtn = document.getElementById("versionBtn");
-const closeModalBtn = document.getElementById("closeModal");
+const versionModal =
+    document.getElementById("versionModal");
 
-versionBtn.addEventListener("click", () => {
-    versionModal.showModal();
-});
+const versionBtn =
+    document.getElementById("versionBtn");
 
-closeModalBtn.addEventListener("click", () => {
-    versionModal.close();
-});
+const closeModalBtn =
+    document.getElementById("closeModal");
 
-versionModal.addEventListener("click", event => {
-    if (event.target === versionModal) {
+if (versionModal && versionBtn) {
+    versionBtn.addEventListener("click", () => {
+        versionModal.showModal();
+    });
+}
+
+if (versionModal && closeModalBtn) {
+    closeModalBtn.addEventListener("click", () => {
         versionModal.close();
-    }
-});
+    });
+}
+
+if (versionModal) {
+    versionModal.addEventListener("click", event => {
+        if (event.target === versionModal) {
+            versionModal.close();
+        }
+    });
+}
