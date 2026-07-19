@@ -166,8 +166,8 @@ function showStations(koyaLine, sembokuStations) {
     sembokuColumn.style.top =
         "78px";
 
-        sembokuColumn.style.left =
-    "70%";
+    sembokuColumn.style.left =
+        "70%";
 
     sembokuColumn.style.width =
         "500px";
@@ -260,14 +260,8 @@ function showTrains(trainData, stationIds) {
             openDetail(train);
         };
 
-        const cars =
-            Array.isArray(
-                train.car_numbers
-            )
-                ? train.car_numbers
-                    .filter(car => car !== 0)
-                    .join(" + ")
-                : "";
+        const totalCars =
+            Number(train.train_length_id) || 0;
 
         let trainType =
             "種別不明";
@@ -301,7 +295,7 @@ function showTrains(trainData, stationIds) {
             </div>
 
             <div class="train-cars">
-                ${cars || "編成不明"}
+                ${totalCars ? `${totalCars}両` : "両数不明"}
             </div>
         `;
 
@@ -326,23 +320,17 @@ async function openDetail(train) {
         return;
     }
 
-    const cars =
+    const formationNumbers =
         Array.isArray(
             train.car_numbers
         )
             ? train.car_numbers
-                .filter(car => car !== 0)
+                .filter(car => Number(car) !== 0)
                 .join(" + ")
             : "";
 
-    const carCounts =
-        Array.isArray(
-            train.car_counts
-        )
-            ? train.car_counts
-                .filter(count => count !== 0)
-                .join(" + ")
-            : "";
+    const totalCars =
+        Number(train.train_length_id) || 0;
 
     const doorCounts =
         Array.isArray(
@@ -450,11 +438,11 @@ async function openDetail(train) {
             <p><b>運転区間</b></p>
             <p>${section}</p>
 
-            <p><b>編成</b></p>
-            <p>${cars || "不明"}</p>
+            <p><b>編成番号（参考）</b></p>
+            <p>${formationNumbers || "不明"}</p>
 
             <p><b>両数</b></p>
-            <p>${carCounts || "不明"}</p>
+            <p>${totalCars ? `${totalCars}両` : "不明"}</p>
 
             <p><b>扉数</b></p>
             <p>${doorCounts || "不明"}</p>
@@ -514,11 +502,11 @@ async function openDetail(train) {
             <p><b>運転区間</b></p>
             <p>${fallbackSection}</p>
 
-            <p><b>編成</b></p>
-            <p>${cars || "不明"}</p>
+            <p><b>編成番号（参考）</b></p>
+            <p>${formationNumbers || "不明"}</p>
 
             <p><b>両数</b></p>
-            <p>${carCounts || "不明"}</p>
+            <p>${totalCars ? `${totalCars}両` : "不明"}</p>
 
             <p><b>扉数</b></p>
             <p>${doorCounts || "不明"}</p>
