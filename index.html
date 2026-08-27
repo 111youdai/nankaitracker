@@ -12,12 +12,38 @@
 <body>
 
     <header>
-        <h1>🚃 南海列車位置</h1>
-        <p id="updateTime">更新中...</p>
+        <div class="header-top-row">
+            <h1>🚃 南海列車位置</h1>
 
-        <button id="versionBtn" type="button">
-            📜 更新履歴
-        </button>
+            <button id="versionBtn" type="button">
+                📜 更新履歴
+            </button>
+        </div>
+
+        <div class="line-switcher" role="tablist" aria-label="表示路線切替">
+            <button
+                id="nankaiLineBtn"
+                class="line-switch-btn"
+                type="button"
+                data-line-mode="nankai"
+                role="tab"
+            >
+                南海線
+            </button>
+
+            <button
+                id="koyaLineBtn"
+                class="line-switch-btn"
+                type="button"
+                data-line-mode="koya"
+                role="tab"
+            >
+                高野線
+            </button>
+        </div>
+
+        <p id="currentLineLabel">高野線・泉北線</p>
+        <p id="updateTime">更新中...</p>
     </header>
 
     <main>
@@ -37,6 +63,14 @@
                 ×
             </button>
         </div>
+
+        <p>
+            <b>Ver 1.2.0</b><br>
+            ・南海線／高野線の切替に対応<br>
+            ・南海本線、空港線、高師浜線、多奈川線、加太線を表示<br>
+            ・南海線の列車詳細APIに対応
+        </p>
+
         <p>
             <b>Ver 1.1.0</b><br>
             ・泉北線対応

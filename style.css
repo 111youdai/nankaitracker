@@ -260,3 +260,172 @@ h1 {
     cursor: pointer;
 }
 
+
+/* ===== Ver 1.2.0 路線切替 ===== */
+
+.header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-top-row #versionBtn {
+    flex-shrink: 0;
+}
+
+.line-switcher {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.line-switch-btn {
+    min-width: 110px;
+    padding: 9px 16px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 999px;
+    background: transparent;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.line-switch-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.line-switch-btn.active {
+    background: white;
+    color: #00883f;
+}
+
+#currentLineLabel {
+    margin: 10px 0 0;
+    font-weight: bold;
+}
+
+#updateTime {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+main {
+    overflow-x: auto;
+}
+
+#line {
+    min-width: 760px;
+}
+
+.route-container {
+    position: relative;
+}
+
+.main-line-column {
+    position: relative;
+    z-index: 2;
+}
+
+.branch-connector {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    width: 180px;
+    height: 4px;
+    background: #666;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+.branch-connector::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    border-top: 4px solid #666;
+    border-right: 4px solid #666;
+    transform: rotate(45deg);
+}
+
+.branch-column {
+    position: absolute;
+    top: 78px;
+    left: 70%;
+    width: 500px;
+    z-index: 3;
+}
+
+.branch-label {
+    position: absolute;
+    top: -27px;
+    left: 43%;
+    transform: translateX(-50%);
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #e4e4e4;
+    color: #555;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.branch-station .station-name,
+.branch-station .station-number {
+    background: #f2f2f2;
+}
+
+.detail-warning {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fff3cd;
+    color: #664d03;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.detail-error {
+    color: #666;
+}
+
+@media (max-width: 700px) {
+    header {
+        padding: 12px;
+    }
+
+    .header-top-row {
+        align-items: flex-start;
+    }
+
+    h1 {
+        font-size: 21px;
+    }
+
+    .line-switcher {
+        width: 100%;
+    }
+
+    .line-switch-btn {
+        flex: 1;
+        min-width: 0;
+    }
+
+    #line {
+        min-width: 700px;
+        padding: 12px;
+    }
+
+    #detailPanel {
+        width: min(400px, 92vw);
+        right: -100vw;
+    }
+
+    #detailPanel.open {
+        right: 0;
+    }
+}

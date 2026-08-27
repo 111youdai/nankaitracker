@@ -4,25 +4,8 @@ import {
     KOYA_TRAIN_KINDS
 } from "./constants.js";
 
-/*
- * 高野線API内の泉北線駅ID。
- * 151は中百舌鳥、152～156は深井～和泉中央。
- */
 const SEMBOKU_STATION_IDS =
     new Set([151, 152, 153, 154, 155, 156]);
-
-/*
- * 2026年3月改正時点で、列車番号から泉北系統を補助判定する接頭辞。
- * 現在位置・行先・種別情報を先に使い、これは最後の補助判定だけに使う。
- */
-const SEMBOKU_TRAIN_PREFIXES =
-    new Set(["32", "41", "57"]);
-
-/*
- * trains.jsonで和泉中央として使われている行先駅ID。
- */
-const SEMBOKU_DESTINATION_IDS =
-    new Set([66]);
 
 function toPositiveIntegers(values) {
     if (!Array.isArray(values)) {
@@ -37,22 +20,6 @@ function toPositiveIntegers(values) {
         );
 }
 
-function getTrainNumberPrefix(trainNumber) {
-    const number =
-        String(trainNumber ?? "").trim();
-
-    return number.length >= 2
-        ? number.substring(0, 2)
-        : number.padStart(2, "0");
-}
-
-/**
- * 列車番号から運行上の種別・区間を取得する
- *
- * lineId
- * 1 = 南海線
- * 2 = 高野線
- */
 export function getTrainKindByNumber(
     lineId,
     trainNumber
@@ -64,7 +31,6 @@ export function getTrainKindByNumber(
         return null;
     }
 
-    // 3415 → 34、2750 → 27
     const kindNumber =
         number.length >= 4
             ? number.substring(0, 2)
@@ -73,14 +39,11 @@ export function getTrainKindByNumber(
                 .substring(0, 2);
 
     const key =
-        `${lineId}${kindNumber}`;
+        `${Number(lineId)}${kindNumber}`;
 
     return TRAIN_KINDS[key] ?? null;
 }
 
-/**
- * APIのtrain_kind_idから表示用種別を取得する
- */
 export function getTrainKindById(
     lineId,
     trainKindId
@@ -92,8 +55,7 @@ export function getTrainKindById(
         return null;
     }
 
-    const id =
-        String(trainKindId);
+    const id = String(trainKindId);
 
     if (Number(lineId) === 1) {
         return NANKAI_TRAIN_KINDS[id] ?? null;
@@ -106,15 +68,6 @@ export function getTrainKindById(
     return null;
 }
 
-/**
- * API情報と列車番号情報を合成する
- *
- * 種別名:
- *   train_kind_idを優先
- *
- * 運転区間:
- *   列車番号のTRAIN_KINDSを優先
- */
 export function resolveTrainKind({
     lineId,
     trainNumber,
@@ -160,17 +113,66 @@ export function resolveTrainKind({
     };
 }
 
+function textContainsSemboku(text) {
+    return /泉北|和泉中央|光明池|中百舌鳥|各停Ｅ|区間急行Ｅ|準急Ｅ|泉北ライナー/i
+        .test(String(text ?? ""));
+}
+
+function textExplicitlyMeansNonSemboku(text) {
+    return /こうや|りんかん|天空|極楽橋|橋本|河内長野|三日市町|林間田園都市|金剛|北野田|堺東/i
+        .test(String(text ?? ""));
+}
+
 /**
- * 泉北線系統の列車かを判定する。
+ * 高野線データの列車が泉北系統かを判定する。
  *
- * 優先順位:
- * 1. 現在駅・次駅
- * 2. 行先駅
- * 3. 種別・運転区間の文字
- * 4. 列車番号の接頭辞
+ * 列車番号から判定できる運転区間を最優先にする。
+ * これにより、APIの位置駅IDだけが誤って泉北側になった列車を
+ * そのまま泉北線へ描画しにくくする。
  */
 export function isSembokuService(train) {
-    if (!train) {
+    if (!train || Number(train.line_id) !== 2) {
+        return false;
+    }
+
+    const byNumber =
+        getTrainKindByNumber(
+            2,
+            train.train_number
+        );
+
+    if (byNumber?.section) {
+        if (
+            textContainsSemboku(
+                `${byNumber.train_type} ${byNumber.section} ${byNumber.kind}`
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            textExplicitlyMeansNonSemboku(
+                `${byNumber.train_type} ${byNumber.section} ${byNumber.kind}`
+            )
+        ) {
+            return false;
+        }
+    }
+
+    const byId =
+        getTrainKindById(
+            2,
+            train.train_kind_id
+        );
+
+    const byIdText =
+        `${byId?.train_type || ""} ${byId?.section || ""} ${byId?.kind || ""}`;
+
+    if (textContainsSemboku(byIdText)) {
+        return true;
+    }
+
+    if (textExplicitlyMeansNonSemboku(byIdText)) {
         return false;
     }
 
@@ -181,56 +183,11 @@ export function isSembokuService(train) {
         .map(value => Number(value))
         .filter(Number.isFinite);
 
-    if (
-        stationIds.some(id =>
-            SEMBOKU_STATION_IDS.has(id)
-        )
-    ) {
-        return true;
-    }
-
-    const destinationStationId =
-        Number(train.destination_station_id);
-
-    if (
-        SEMBOKU_DESTINATION_IDS.has(
-            destinationStationId
-        )
-    ) {
-        return true;
-    }
-
-    const kindInfo =
-        resolveTrainKind({
-            lineId: Number(train.line_id) || 2,
-            trainNumber: train.train_number,
-            trainKindId: train.train_kind_id
-        });
-
-    const kindText = [
-        kindInfo.trainType,
-        kindInfo.section,
-        kindInfo.kind
-    ].join(" ");
-
-    if (
-        /泉北|和泉中央|中百舌鳥|各停Ｅ|区間急行Ｅ|準急Ｅ|泉北ライナー/i
-            .test(kindText)
-    ) {
-        return true;
-    }
-
-    return SEMBOKU_TRAIN_PREFIXES.has(
-        getTrainNumberPrefix(
-            train.train_number
-        )
+    return stationIds.some(id =>
+        SEMBOKU_STATION_IDS.has(id)
     );
 }
 
-/**
- * 特急系の列車かを判定する。
- * 泉北ライナー・こうや・りんかんを含む。
- */
 export function isLimitedExpressTrain(train) {
     if (!train) {
         return false;
@@ -249,21 +206,27 @@ export function isLimitedExpressTrain(train) {
         kindInfo.kind
     ].join(" ");
 
-    return /特急|こうや|りんかん|泉北ライナー/i
+    return /特急|ラピート|ｻｻﾞﾝ|サザン|こうや|りんかん|泉北ライナー|天空/i
         .test(kindText);
 }
 
 /**
- * trains.jsonの両数・編成番号を検証する。
+ * 泉北線の駅IDにいると配信された列車を、
+ * 実際に泉北側へ描画してよいか判定する。
+ */
+export function canPlaceOnSemboku(train) {
+    if (!train) {
+        return false;
+    }
+
+    return isSembokuService(train);
+}
+
+/**
+ * trains.json の編成情報を検証する。
  *
- * APIではまれに、
- * train_length_id = 8
- * car_counts = [6, 0, 0, 0]
- * car_numbers = [6312, 0, 0, 0]
- * のように、列車全体の両数と編成情報が一致しないことがある。
- *
- * その場合、列車全体の両数は表示するが、
- * 誤った編成番号は画面へ出さない。
+ * train_length_id と car_counts の合計が一致しない場合は、
+ * 編成番号 car_numbers を画面へ出さない。
  */
 export function analyzeTrainFormation(train) {
     const rawTotalCars =
@@ -295,11 +258,6 @@ export function analyzeTrainFormation(train) {
     const limitedExpress =
         isLimitedExpressTrain(train);
 
-    /*
-     * 通常の泉北線列車は6両または8両。
-     * ユーザー確認済みの運用条件により、
-     * 特急以外の4両表示は不整合として扱う。
-     */
     const impossibleFourCarSemboku =
         sembokuService &&
         !limitedExpress &&

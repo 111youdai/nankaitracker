@@ -7,16 +7,51 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
-function showUpdateTime(trainData) {
+function showUpdateTime(
+    trainData,
+    mode = window.activeLineMode || "koya"
+) {
     const updateTime =
-        document.getElementById("updateTime");
+        document.getElementById(
+            "updateTime"
+        );
 
     if (!updateTime) {
         return;
     }
 
+    const isNankai =
+        mode === "nankai";
+
+    const date =
+        isNankai
+            ? (
+                trainData.nankai_update_date ||
+                trainData.koya_update_date ||
+                ""
+            )
+            : (
+                trainData.koya_update_date ||
+                trainData.nankai_update_date ||
+                ""
+            );
+
+    const time =
+        isNankai
+            ? (
+                trainData.nankai_update_time ||
+                trainData.koya_update_time ||
+                ""
+            )
+            : (
+                trainData.koya_update_time ||
+                trainData.nankai_update_time ||
+                ""
+            );
+
     updateTime.textContent =
-        `${trainData.koya_update_date} ${trainData.koya_update_time}`;
+        `${date} ${time}`.trim() ||
+        "更新時刻不明";
 }
 
 function getStationNumber(station) {
@@ -31,7 +66,20 @@ function getStationNumber(station) {
         return `NK${Number(station.id) - 64}`;
     }
 
-    return `NK${station.eki_number}`;
+    const rawNumber =
+        String(
+            station.eki_number ?? ""
+        ).trim();
+
+    if (!rawNumber) {
+        return "";
+    }
+
+    return rawNumber
+        .toUpperCase()
+        .startsWith("NK")
+            ? rawNumber
+            : `NK${rawNumber}`;
 }
 
 function createStationElement(
@@ -47,6 +95,9 @@ function createStationElement(
     stationElement.id =
         `station-${station.id}`;
 
+    const stationNumber =
+        getStationNumber(station);
+
     stationElement.innerHTML = `
         <div class="up-track"></div>
 
@@ -58,7 +109,7 @@ function createStationElement(
             </div>
 
             <div class="station-number">
-                ${escapeHtml(getStationNumber(station))}
+                ${escapeHtml(stationNumber)}
             </div>
         </div>
 
@@ -68,10 +119,97 @@ function createStationElement(
     return stationElement;
 }
 
-function showStations(
-    koyaLine,
-    sembokuStations
+function calculateBranchExtraRows(
+    mainStations,
+    branches
 ) {
+    let maxExtraRows = 0;
+
+    for (const branch of branches) {
+        const junctionIndex =
+            mainStations.findIndex(
+                station =>
+                    Number(station.id) ===
+                    Number(branch.junctionId)
+            );
+
+        if (junctionIndex < 0) {
+            continue;
+        }
+
+        const mainRowsBelow =
+            mainStations.length -
+            junctionIndex -
+            1;
+
+        const extraRows =
+            Math.max(
+                0,
+                branch.stations.length -
+                mainRowsBelow
+            );
+
+        maxExtraRows =
+            Math.max(
+                maxExtraRows,
+                extraRows
+            );
+    }
+
+    return maxExtraRows;
+}
+
+function attachBranch(
+    branch,
+    junctionRow
+) {
+    junctionRow.style.position =
+        "relative";
+
+    const connector =
+        document.createElement("div");
+
+    connector.className =
+        "branch-connector";
+
+    const branchColumn =
+        document.createElement("div");
+
+    branchColumn.className =
+        "branch-column";
+
+    const branchLabel =
+        document.createElement("div");
+
+    branchLabel.className =
+        "branch-label";
+
+    branchLabel.textContent =
+        branch.label || "支線";
+
+    branchColumn.appendChild(
+        branchLabel
+    );
+
+    for (const station of branch.stations) {
+        branchColumn.appendChild(
+            createStationElement(
+                station,
+                "branch-station"
+            )
+        );
+    }
+
+    junctionRow.appendChild(
+        connector
+    );
+
+    junctionRow.appendChild(
+        branchColumn
+    );
+}
+
+function showRouteStations(routeConfig) {
     const lineElement =
         document.getElementById("line");
 
@@ -90,144 +228,67 @@ function showStations(
     routeContainer.className =
         "route-container";
 
-    const koyaColumn =
+    const mainColumn =
         document.createElement("div");
 
-    koyaColumn.className =
-        "koya-column";
+    mainColumn.className =
+        "main-line-column";
 
-    koyaLine.stations.forEach(station => {
-        koyaColumn.appendChild(
+    for (
+        const station of
+        routeConfig.mainStations
+    ) {
+        mainColumn.appendChild(
             createStationElement(station)
         );
-    });
-
-    routeContainer.appendChild(koyaColumn);
-    lineElement.appendChild(routeContainer);
-
-    const nakamozuStation =
-        koyaLine.stations.find(
-            station =>
-                station.name_ja === "中百舌鳥"
-        );
-
-    if (!nakamozuStation) {
-        console.error(
-            "中百舌鳥が見つかりません"
-        );
-        return;
     }
 
-    const nakamozuRow =
-        document.getElementById(
-            `station-${nakamozuStation.id}`
-        );
+    routeContainer.appendChild(
+        mainColumn
+    );
 
-    if (!nakamozuRow) {
-        console.error(
-            "中百舌鳥の駅表示が見つかりません"
-        );
-        return;
-    }
+    lineElement.appendChild(
+        routeContainer
+    );
 
-    nakamozuRow.style.position =
-        "relative";
+    for (
+        const branch of
+        routeConfig.branches
+    ) {
+        if (!branch.stations.length) {
+            continue;
+        }
 
-    const branchConnector =
-        document.createElement("div");
-
-    branchConnector.style.position =
-        "absolute";
-
-    branchConnector.style.top =
-        "50%";
-
-    branchConnector.style.left =
-        "60%";
-
-    branchConnector.style.width =
-        "180px";
-
-    branchConnector.style.height =
-        "4px";
-
-    branchConnector.style.background =
-        "#666";
-
-    branchConnector.style.transform =
-        "translateY(-50%)";
-
-    branchConnector.style.zIndex =
-        "1";
-
-    const arrow =
-        document.createElement("div");
-
-    arrow.style.position =
-        "absolute";
-
-    arrow.style.right =
-        "0";
-
-    arrow.style.top =
-        "-5px";
-
-    arrow.style.width =
-        "10px";
-
-    arrow.style.height =
-        "10px";
-
-    arrow.style.borderTop =
-        "4px solid #666";
-
-    arrow.style.borderRight =
-        "4px solid #666";
-
-    arrow.style.transform =
-        "rotate(45deg)";
-
-    branchConnector.appendChild(arrow);
-
-    const sembokuColumn =
-        document.createElement("div");
-
-    sembokuColumn.style.position =
-        "absolute";
-
-    sembokuColumn.style.top =
-        "78px";
-
-    sembokuColumn.style.left =
-        "70%";
-
-    sembokuColumn.style.width =
-        "500px";
-
-    sembokuColumn.style.zIndex =
-        "2";
-
-    sembokuStations
-        .filter(
-            station =>
-                Number(station.id) !== 151
-        )
-        .forEach(station => {
-            sembokuColumn.appendChild(
-                createStationElement(
-                    station,
-                    "semboku-station"
-                )
+        const junctionRow =
+            document.getElementById(
+                `station-${branch.junctionId}`
             );
-        });
 
-    nakamozuRow.appendChild(
-        branchConnector
-    );
+        if (!junctionRow) {
+            console.warn(
+                "分岐駅が見つかりません",
+                branch.label,
+                branch.junctionId
+            );
+            continue;
+        }
 
-    nakamozuRow.appendChild(
-        sembokuColumn
-    );
+        attachBranch(
+            branch,
+            junctionRow
+        );
+    }
+
+    const extraRows =
+        calculateBranchExtraRows(
+            routeConfig.mainStations,
+            routeConfig.branches
+        );
+
+    if (extraRows > 0) {
+        routeContainer.style.paddingBottom =
+            `${extraRows * 78}px`;
+    }
 }
 
 function getResolvedKind(train) {
@@ -238,7 +299,9 @@ function getResolvedKind(train) {
         ) {
             return window.resolveTrainKind({
                 lineId:
-                    Number(train.line_id) || 2,
+                    Number(train.line_id) ||
+                    window.activeLineId ||
+                    2,
 
                 trainNumber:
                     train.train_number,
@@ -268,11 +331,13 @@ function getFormationInfo(train) {
         typeof window.analyzeTrainFormation ===
         "function"
     ) {
-        return window.analyzeTrainFormation(train);
+        return window
+            .analyzeTrainFormation(train);
     }
 
     const totalCars =
-        Number(train.train_length_id) || null;
+        Number(train.train_length_id) ||
+        null;
 
     return {
         rawTotalCars: totalCars,
@@ -291,23 +356,94 @@ function getFormationInfo(train) {
     };
 }
 
+function normalizePlacementStationId(
+    stationId,
+    aliases
+) {
+    const rawId =
+        String(stationId);
+
+    return String(
+        aliases?.[rawId] ??
+        aliases?.[Number(rawId)] ??
+        rawId
+    );
+}
+
+function canRenderAtRawStation(
+    train,
+    rawStationId,
+    mode
+) {
+    const stationId =
+        Number(rawStationId);
+
+    if (
+        mode === "koya" &&
+        stationId >= 151 &&
+        stationId <= 156 &&
+        typeof window.canPlaceOnSemboku ===
+            "function"
+    ) {
+        const allowed =
+            window.canPlaceOnSemboku(train);
+
+        if (!allowed) {
+            console.warn(
+                "泉北線への誤配置を抑止",
+                train.train_number,
+                stationId
+            );
+        }
+
+        return allowed;
+    }
+
+    return true;
+}
+
 function showTrains(
     trainData,
-    stationIds
+    stationIds,
+    options = {}
 ) {
     const visibleStationIds =
         new Set(
-            stationIds.map(id => String(id))
+            stationIds.map(id =>
+                String(id)
+            )
         );
 
-    trainData.trains.forEach(train => {
+    const expectedLineId =
+        Number(options.lineId) ||
+        window.activeLineId ||
+        2;
+
+    const mode =
+        options.mode ||
+        window.activeLineMode ||
+        "koya";
+
+    const aliases =
+        options.placementAliases || {};
+
+    for (const train of trainData.trains || []) {
+        if (
+            Number(train.line_id) !==
+            expectedLineId
+        ) {
+            continue;
+        }
+
         const currentStationId =
             String(train.station_id);
 
         const nextStationId =
             train.next_station_id == null
                 ? null
-                : String(train.next_station_id);
+                : String(
+                    train.next_station_id
+                );
 
         const currentIsVisible =
             visibleStationIds.has(
@@ -324,17 +460,29 @@ function showTrains(
             !currentIsVisible &&
             !nextIsVisible
         ) {
-            return;
+            continue;
         }
 
-        /*
-         * 現在駅が表示範囲外で、次駅だけが表示範囲内の場合は
-         * 次駅側へ仮置きする。
-         */
-        const placementStationId =
+        let rawPlacementStationId =
             currentIsVisible
                 ? currentStationId
                 : nextStationId;
+
+        if (
+            !canRenderAtRawStation(
+                train,
+                rawPlacementStationId,
+                mode
+            )
+        ) {
+            continue;
+        }
+
+        const placementStationId =
+            normalizePlacementStationId(
+                rawPlacementStationId,
+                aliases
+            );
 
         const stationElement =
             document.getElementById(
@@ -345,22 +493,25 @@ function showTrains(
             console.warn(
                 "列車を置く駅が見つかりません",
                 train.train_number,
+                rawPlacementStationId,
                 placementStationId
             );
-            return;
+            continue;
         }
 
         const target =
             train.direction === "up"
-                ? stationElement.querySelector(
-                    ".up-track"
-                )
-                : stationElement.querySelector(
-                    ".down-track"
-                );
+                ? stationElement
+                    .querySelector(
+                        ".up-track"
+                    )
+                : stationElement
+                    .querySelector(
+                        ".down-track"
+                    );
 
         if (!target) {
-            return;
+            continue;
         }
 
         const trainElement =
@@ -401,17 +552,20 @@ function showTrains(
         if (
             formationInfo.problems.length > 0
         ) {
-            trainElement.dataset.formationWarning =
-                formationInfo.problems.join(" / ");
+            trainElement.dataset
+                .formationWarning =
+                    formationInfo.problems
+                        .join(" / ");
 
             trainElement.title =
-                formationInfo.problems.join("\n");
+                formationInfo.problems
+                    .join("\n");
         }
 
         target.appendChild(
             trainElement
         );
-    });
+    }
 }
 
 function getPositionText(train) {
@@ -482,9 +636,11 @@ function getFormationDetailHtml(
     ) {
         return `
             <p><b>編成番号</b></p>
-            <p>${escapeHtml(
-                formationInfo.formationText
-            )}</p>
+            <p>
+                ${escapeHtml(
+                    formationInfo.formationText
+                )}
+            </p>
 
             <p><b>両数</b></p>
             <p>${escapeHtml(totalCarsText)}</p>
@@ -493,7 +649,8 @@ function getFormationDetailHtml(
 
     const problemText =
         formationInfo.problems.length > 0
-            ? formationInfo.problems.join("／")
+            ? formationInfo.problems
+                .join("／")
             : "編成情報が不完全です";
 
     return `
@@ -512,7 +669,9 @@ function getFormationDetailHtml(
 
 function createStationTable(detail) {
     if (
-        !Array.isArray(detail?.station_infos) ||
+        !Array.isArray(
+            detail?.station_infos
+        ) ||
         detail.station_infos.length === 0
     ) {
         return "";
@@ -555,6 +714,19 @@ function createStationTable(detail) {
     `;
 }
 
+function getRouteName(
+    train,
+    formationInfo
+) {
+    if (Number(train.line_id) === 1) {
+        return "南海線系統";
+    }
+
+    return formationInfo.sembokuService
+        ? "泉北線系統"
+        : "高野線系統";
+}
+
 function renderTrainDetail({
     content,
     train,
@@ -590,9 +762,10 @@ function renderTrainDetail({
             : "下り";
 
     const routeName =
-        formationInfo.sembokuService
-            ? "泉北線系統"
-            : "高野線系統";
+        getRouteName(
+            train,
+            formationInfo
+        );
 
     const warningHtml =
         warningText
@@ -696,10 +869,6 @@ async function openDetail(train) {
         <p>列車情報を取得中...</p>
     `;
 
-    /*
-     * 回送は詳細APIが「リクエストフォーマットが不正」と
-     * 返すことが多いため、位置APIの情報だけで表示する。
-     */
     if (/回送/.test(kindInfo.trainType)) {
         renderTrainDetail({
             content,
@@ -715,7 +884,10 @@ async function openDetail(train) {
     try {
         const detail =
             await getTrainDetail(
-                train.train_number
+                train.train_number,
+                Number(train.line_id) ||
+                window.activeLineId ||
+                2
             );
 
         renderTrainDetail({
