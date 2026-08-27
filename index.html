@@ -28,7 +28,7 @@
                 data-line-mode="nankai"
                 role="tab"
             >
-                南海線
+                🔒 南海線
             </button>
 
             <button
@@ -55,6 +55,53 @@
         <div id="detailContent"></div>
     </div>
 
+    <dialog id="nankaiAuthModal">
+        <form id="nankaiAuthForm" method="dialog">
+            <div class="auth-header">
+                <h2>🔒 南海線</h2>
+
+                <button
+                    id="closeAuthModal"
+                    type="button"
+                    aria-label="閉じる"
+                >
+                    ×
+                </button>
+            </div>
+
+            <p>
+                南海線の閲覧には
+                共通パスワードが必要です。
+            </p>
+
+            <label for="nankaiPassword">
+                パスワード
+            </label>
+
+            <input
+                id="nankaiPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+            >
+
+            <p
+                id="nankaiAuthError"
+                class="auth-error"
+                aria-live="polite"
+            ></p>
+
+            <button
+                id="nankaiAuthSubmit"
+                class="auth-submit"
+                type="submit"
+            >
+                南海線を開く
+            </button>
+        </form>
+    </dialog>
+
     <dialog id="versionModal">
         <div class="version-header">
             <h2>📜 更新履歴</h2>
@@ -63,6 +110,12 @@
                 ×
             </button>
         </div>
+
+        <p>
+            <b>Ver 1.2.1</b><br>
+            ・南海線に共通パスワード認証を追加<br>
+            ・認証済みのタブでは再入力を省略
+        </p>
 
         <p>
             <b>Ver 1.2.0</b><br>
