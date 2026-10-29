@@ -1,5 +1,5 @@
 import core from './core.cjs';
-const {tableNumbers,numberKey,formation}=core;
+const {tableNumbers,numberKey,ignoredTrain,formation}=core;
 export const read=async(db,key)=>{const r=await db.prepare('SELECT value FROM meta WHERE key=?').bind(key).first();return r?JSON.parse(r.value):null;};
 export const put=(db,key,v)=>db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').bind(key,JSON.stringify(v));
 export async function requestJson(url,options={}){
@@ -45,7 +45,7 @@ export async function baseline(db,day,now){
 export async function classify(db,row,b,maxCandidates=10){
  const p=JSON.parse(row.payload),remaining=[],statements=[];let count=0;
  for(const t of p.trains){
-  const key=numberKey(t.train_number);if(!key||b.numbers[row.group_name].has(key))continue;
+  const key=numberKey(t.train_number);if(!key||ignoredTrain(key)||b.numbers[row.group_name].has(key))continue;
   if(count++>=maxCandidates){remaining.push(t);continue;}
   const raw=JSON.stringify(t),form=JSON.stringify(formation(t));
   statements.push(db.prepare(`INSERT INTO events(service_date,group_name,train_key,train_number,first_seen,last_seen,formation,baseline,last_payload) VALUES (?,?,?,?,?,?,?,?,?)

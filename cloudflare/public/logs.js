@@ -20,7 +20,8 @@ async function status(){
 }
 async function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}
 function card(e){
- const a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} 列車`),el('span','定期外候補','tag'));a.append(top);
+ const known=e.special,a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} 列車`),el('span',known?.label||'定期外候補','tag'+(known?' known':'')));a.append(top);
+ if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
  const d=el('div',undefined,'details');const p=e.last_payload;
  for(const [k,v] of [['編成（最後に検証できた値）',e.formation.text],['運行日・系統',`${e.service_date} ／ ${e.group_name==='nankai'?'南海線系統':'高野線系統'}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(e.last_seen)}`],['最終位置（API駅ID）',`${p.station_id??'不明'} → ${p.next_station_id??'停車中'} ／ ${p.direction??'方向不明'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);
  const button=el('button','確認履歴・元データ'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);

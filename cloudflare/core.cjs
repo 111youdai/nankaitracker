@@ -1,9 +1,11 @@
 'use strict';
 const GROUPS = {1: 'nankai', 2: 'koya'};
+const IGNORED_TRAIN_KEYS = Object.freeze(['88']);
 function numberKey(value) {
   const s = String(value ?? '').normalize('NFKC').trim().replace(/^回\s*/, '').toUpperCase();
   return /^\d+$/.test(s) ? s.replace(/^0+(?=\d)/, '') : s;
 }
+function ignoredTrain(value) {return IGNORED_TRAIN_KEYS.includes(numberKey(value));}
 function serviceDate(time) {
   // 04:00 JST boundary; a night train belongs to the preceding operating day.
   return new Date(new Date(time).getTime() + 5 * 3600000).toISOString().slice(0, 10);
@@ -41,4 +43,25 @@ function formation(t) {
   const valid = pairs.length > 0 && pairs.every(([n,c]) => Number.isInteger(n) && n > 0 && Number.isInteger(c) && c > 0) && pairs.reduce((sum,p) => sum+p[1],0) === total && !cs.slice(ns.length).some(c=>Number(c)>0);
   return {verified: valid, text: valid ? pairs.map(([n,c])=>`${n}F (${c}両)`).join(' + ') : '編成未確認', numbers: ns, counts: cs, totalCars: total || null};
 }
-module.exports = {GROUPS, numberKey, serviceDate, sourceTime, tableNumbers, formation};
+const SPECIAL_TRAINS = Object.freeze({
+  '8376': {category:'chiyoda-test',label:'千代田出場試運転（上り）',route:'千代田出場・上り',note:'千代田工場出場後の試運転に使われる列番'},
+  '8679': {category:'chiyoda-test',label:'千代田出場試運転（下り）',route:'千代田出場・下り',note:'千代田工場出場後の試運転に使われる列番'},
+  '9185': {category:'scrap-transfer',label:'廃車回送（廃回）スジ',route:'千代田 → 小原田',note:'千代田発・小原田行きの廃車回送スジ'},
+  '8680': {category:'temporary-deadhead',label:'臨時回送スジ',route:'小原田 → 千代田',schedule:'小原田 17:01発 → 千代田 17:24着'},
+  '8721': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連回送',route:'住ノ江 → なんば',schedule:'住ノ江 13:50発 → なんば 14:02着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},
+  '8722': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連・千代田回送',route:'なんば → 千代田',schedule:'なんば 14:14発 → 千代田 14:56着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},
+  '8673': {category:'chiyoda-entry',label:'千代田入場回送',route:'住ノ江 → なんば → 千代田',schedules:{weekday:'住ノ江 10:40発 → なんば 10:52着・10:58発 → 千代田 11:34着',weekend:'土日：なんば 10:43発 → 千代田 11:24着'},note:'8070レとなる場合あり'},
+  '8070': {category:'chiyoda-entry',label:'千代田入場回送',route:'住ノ江 → なんば → 千代田',schedules:{weekday:'住ノ江 10:40発 → なんば 10:52着・10:58発 → 千代田 11:34着',weekend:'土日：なんば 10:43発 → 千代田 11:24着'},note:'8673レとなる場合あり'}
+});
+function specialService(value,day='') {
+  const trainKey=numberKey(value),base=SPECIAL_TRAINS[trainKey];
+  if (!base) return null;
+  const result={...base,trainKey};
+  if (base.schedules) {
+    const dow=/^\d{4}-\d{2}-\d{2}$/.test(day)?new Date(`${day}T00:00:00Z`).getUTCDay():-1;
+    result.schedule=base.schedules[dow===0||dow===6?'weekend':'weekday'];
+    delete result.schedules;
+  }
+  return result;
+}
+module.exports = {GROUPS, IGNORED_TRAIN_KEYS, numberKey, ignoredTrain, serviceDate, sourceTime, tableNumbers, formation, specialService};

@@ -1,5 +1,7 @@
 import {poll,refresh,read,put} from './data.mjs';
 import {issue,authorized,samePassword} from './auth.mjs';
+import core from './core.cjs';
+const {specialService}=core;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
@@ -24,11 +26,12 @@ export async function handle(request,env){
    if(p==='/api/logs'){
     const date=u.searchParams.get('date')||'',group=u.searchParams.get('group')||'',q=(u.searchParams.get('q')||'').slice(0,80),before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
     if((date&&!/^\d{4}-\d{2}-\d{2}$/.test(date))||(group&&!['nankai','koya'].includes(group))||!Number.isSafeInteger(before)||before<1)return json({error:'検索条件が不正です'},400);
-    let sql='SELECT * FROM events WHERE id<?',args=[before];
+    const ignored=core.IGNORED_TRAIN_KEYS;
+    let sql=`SELECT * FROM events WHERE id<?${ignored.length?` AND train_key NOT IN (${ignored.map(()=>'?').join(',')})`:''}`,args=[before,...ignored];
     if(date){sql+=' AND service_date=?';args.push(date);}if(group){sql+=' AND group_name=?';args.push(group);}
     if(q){sql+=' AND (train_number LIKE ? OR formation LIKE ? OR EXISTS(SELECT 1 FROM observations o WHERE o.event_id=events.id AND o.payload LIKE ?))';args.push(`%${q}%`,`%${q}%`,`%${q}%`);}
     const rows=(await db.prepare(sql+' ORDER BY id DESC LIMIT 100').bind(...args).all()).results;
-    const items=rows.map(e=>({...e,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),last_payload:JSON.parse(e.last_payload)}));
+    const items=rows.map(e=>({...e,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),last_payload:JSON.parse(e.last_payload),special:specialService(e.train_number,e.service_date)}));
     return json({items,next:items.length===100?items.at(-1).id:null});
    }
    const m=p.match(/^\/api\/logs\/(\d+)\/observations$/);
