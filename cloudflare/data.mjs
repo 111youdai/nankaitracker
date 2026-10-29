@@ -1,5 +1,7 @@
 import core from './core.cjs';
+import fleet from './fleet.cjs';
 const {tableNumbers,numberKey,ignoredTrain,formation}=core;
+const {buildHubFleet}=fleet;
 export const read=async(db,key)=>{const r=await db.prepare('SELECT value FROM meta WHERE key=?').bind(key).first();return r?JSON.parse(r.value):null;};
 export const put=(db,key,v)=>db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').bind(key,JSON.stringify(v));
 export async function requestJson(url,options={}){
@@ -9,6 +11,18 @@ export async function requestJson(url,options={}){
  return JSON.parse(text);
 }
 async function hub(endpoint,p){return requestJson('https://unyohub.2pd.jp/api/'+endpoint+'.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...p,last_modified_timestamp:'0'})});}
+export async function refreshFleet(db,now,request=hub){
+ const [nankaiOverviews,nankaiFormations,koyaOverviews,koyaFormations]=await Promise.all([
+  request('formation_overviews',{railroad_id:'nankai'}),request('formations',{railroad_id:'nankai'}),
+  request('formation_overviews',{railroad_id:'koya'}),request('formations',{railroad_id:'koya'})
+ ]);
+ for(const [group,overviews,formations] of [['nankai',nankaiOverviews,nankaiFormations],['koya',koyaOverviews,koyaFormations]]){
+  if(!overviews||typeof overviews!=='object'||Array.isArray(overviews))throw Error(`${group}: 編成概要が不正です`);
+  if(!formations?.formations||typeof formations.formations!=='object')throw Error(`${group}: 編成表が不正です`);
+ }
+ const snapshot=buildHubFleet({nankai:nankaiOverviews,koya:koyaOverviews},{nankai:nankaiFormations,koya:koyaFormations},now.toISOString());
+ await put(db,'fleet-status',snapshot).run();return snapshot;
+}
 export async function refresh(db,now,request=hub){
  const group=['nankai','nankai','koya','koya'][Math.floor(now.getTime()/900000)%4];
  const diagram=['weekday','holiday','weekday','holiday'][Math.floor(now.getTime()/900000)%4];

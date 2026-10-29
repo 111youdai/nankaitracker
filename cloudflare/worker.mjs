@@ -1,10 +1,22 @@
-import {poll,refresh,read,put} from './data.mjs';
+import {poll,refresh,refreshFleet,read,put} from './data.mjs';
 import {issue,authorized,samePassword} from './auth.mjs';
 import core from './core.cjs';
 import stations from './stations.cjs';
+import fleet from './fleet.cjs';
 const {specialService}=core;
 const {trajectoryPositions}=stations;
+const {mergeFleetStatus}=fleet;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+function decodeEvent(e){
+ const {second_payload,previous_payload,...event}=e,first=JSON.parse(e.first_payload||e.last_payload),second=second_payload?JSON.parse(second_payload):null,previous=previous_payload?JSON.parse(previous_payload):null,last=JSON.parse(e.last_payload);
+ const firstPosition=trajectoryPositions(second?[first,second]:[first],{eventStart:true})[0],lastPositions=trajectoryPositions(previous?[previous,last]:[last],{eventEnd:true}),lastPosition=lastPositions.at(-1);
+ return {...event,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},special:specialService(e.train_number,e.service_date)};
+}
+const eventSelect=`SELECT events.*,
+ (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload,
+ (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1 OFFSET 1) AS second_payload,
+ (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time DESC,o.id DESC LIMIT 1 OFFSET 1) AS previous_payload
+ FROM events`;
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
  try{
@@ -14,6 +26,16 @@ export async function handle(request,env){
    let data;try{data=JSON.parse(body);}catch{return json({error:'JSONが不正です'},400);}
    if(!await samePassword(data.password,env.LOG_ACCESS_PASSWORD))return json({error:'パスワードが違います'},401);
    return json({ok:true,token:await issue(env.LOG_ACCESS_PASSWORD),expires_in:43200});
+  }
+  if(p==='/api/fleet-status'){
+   if(!await authorized(request,env.LOG_ACCESS_PASSWORD))return json({error:'編成状況表の閲覧にはパスワードが必要です'},401);
+   if(!['GET','POST'].includes(request.method))return json({error:'許可されていない操作です'},405);
+   let snapshot=await read(db,'fleet-status');
+   const stale=!snapshot||!Number.isFinite(Date.parse(snapshot.fetchedAt))||Date.now()-Date.parse(snapshot.fetchedAt)>3600000;
+   if(request.method==='POST'||stale)snapshot=await refreshFleet(db,new Date());
+   snapshot=snapshot||{fetchedAt:null,items:[]};
+   const rows=(await db.prepare(eventSelect+' ORDER BY events.last_seen DESC,events.id DESC LIMIT 500').all()).results,events=rows.map(decodeEvent).map(e=>({id:e.id,serviceDate:e.service_date,groupName:e.group_name,trainNumber:e.train_number,firstSeen:e.first_seen,lastSeen:e.last_seen,formation:e.formation,firstPosition:e.first_position,lastPosition:e.last_position,special:e.special}));
+   return json(mergeFleetStatus(snapshot,events));
   }
   if(p.startsWith('/api/logs')){
    if(!await authorized(request,env.LOG_ACCESS_PASSWORD))return json({error:'ログ閲覧にはパスワードが必要です'},401);
@@ -29,18 +51,10 @@ export async function handle(request,env){
     const date=u.searchParams.get('date')||'',group=u.searchParams.get('group')||'',q=(u.searchParams.get('q')||'').slice(0,80),before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
     if((date&&!/^\d{4}-\d{2}-\d{2}$/.test(date))||(group&&!['nankai','koya'].includes(group))||!Number.isSafeInteger(before)||before<1)return json({error:'検索条件が不正です'},400);
     const ignored=core.IGNORED_TRAIN_KEYS;
-    let sql=`SELECT events.*,
-     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload,
-     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1 OFFSET 1) AS second_payload,
-     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time DESC,o.id DESC LIMIT 1 OFFSET 1) AS previous_payload
-     FROM events WHERE id<?${ignored.length?` AND train_key NOT IN (${ignored.map(()=>'?').join(',')})`:''}`,args=[before,...ignored];
+    let sql=eventSelect+` WHERE events.id<?${ignored.length?` AND events.train_key NOT IN (${ignored.map(()=>'?').join(',')})`:''}`,args=[before,...ignored];
     if(date){sql+=' AND service_date=?';args.push(date);}if(group){sql+=' AND group_name=?';args.push(group);}
     if(q){sql+=' AND (train_number LIKE ? OR formation LIKE ? OR EXISTS(SELECT 1 FROM observations o WHERE o.event_id=events.id AND o.payload LIKE ?))';args.push(`%${q}%`,`%${q}%`,`%${q}%`);}
-    const rows=(await db.prepare(sql+' ORDER BY id DESC LIMIT 100').bind(...args).all()).results;
-    const items=rows.map(e=>{const {second_payload,previous_payload,...event}=e,first=JSON.parse(e.first_payload||e.last_payload),second=second_payload?JSON.parse(second_payload):null,previous=previous_payload?JSON.parse(previous_payload):null,last=JSON.parse(e.last_payload);
-     const firstPosition=trajectoryPositions(second?[first,second]:[first],{eventStart:true})[0];
-     const lastPositions=trajectoryPositions(previous?[previous,last]:[last],{eventEnd:true}),lastPosition=lastPositions.at(-1);
-     return {...event,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},special:specialService(e.train_number,e.service_date)};});
+    const rows=(await db.prepare(sql+' ORDER BY id DESC LIMIT 100').bind(...args).all()).results,items=rows.map(decodeEvent);
     return json({items,next:items.length===100?items.at(-1).id:null});
    }
    const m=p.match(/^\/api\/logs\/(\d+)\/observations$/);
@@ -63,6 +77,7 @@ export default {
   const now=new Date(event.scheduledTime);
   if(event.cron==='*/15 * * * *'){
    try{await refresh(env.DB,now);}catch(e){console.error('baseline refresh',e.message);await put(env.DB,'refresh',{error:e.message,attemptedAt:now.toISOString()}).run();throw e;}
+   try{const snapshot=await read(env.DB,'fleet-status');if(!snapshot||now-Date.parse(snapshot.fetchedAt)>3600000)await refreshFleet(env.DB,now);}catch(e){console.error('fleet refresh',e.message);}
   }else{
    // SQL lease avoids double processing if scheduled executions overlap.
    const minute=Math.floor(event.scheduledTime/60000),lease=await env.DB.prepare(`INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)`).bind('lease:'+minute,JSON.stringify(now.toISOString())).run();

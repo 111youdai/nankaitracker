@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';
-let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false;
+let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false;
 const time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'未確認';
 const clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'時刻不明';
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
@@ -10,6 +10,10 @@ async function api(url,options={}){
  if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;
 }
 function error(e){$('error').textContent=e.message;}
+function showView(name){
+ const fleet=name==='fleet';$('logView').hidden=fleet;$('fleetView').hidden=!fleet;$('logTab').classList.toggle('active',!fleet);$('fleetTab').classList.toggle('active',fleet);
+ if(fleet&&!fleetLoaded)void loadFleet();
+}
 async function status(){
  try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'クラウドで監視中':'監視・照合の状態を確認してください'));
  box.append(el('p',`最終取得：${time(s.lastSuccess)} ／ 取得間隔：${s.intervalSeconds}秒 ／ 照合待ち：${s.pending}件`));
@@ -36,9 +40,25 @@ async function load(reset=true){if(busy)return;busy=true;$('error').textContent=
  if(reset&&!data.items.length)$('events').append(el('p','該当する記録はありません。監視開始前の履歴は取得できません。'));
  next=data.next;$('more').hidden=!next;await status();
  }catch(e){error(e);}finally{busy=false;}}
+const categoryOrder=['6両（固定）','4両（固定）','2両（固定）','特急車・その他'];
+function evidenceList(item){
+ const list=el('ul',undefined,'evidence');
+ for(const evidence of item.evidence||[]){const li=el('li'),badge=el('span',evidence.source==='hub'?'運用Hub':'列車ログ','source'+(evidence.source==='log'?' log':''));li.append(badge);
+  if(evidence.source==='hub'&&evidence.url){const a=el('a',evidence.label);a.href=evidence.url;a.target='_blank';a.rel='noopener';li.append(a);}else{li.append(document.createTextNode(evidence.label));if(evidence.trainNumber){const button=el('button','ログを見る');button.type='button';button.onclick=()=>{$('date').value=evidence.serviceDate||'';$('group').value=evidence.groupName||'';$('query').value=evidence.trainNumber;showView('log');void load();};li.append(' ',button);}}
+  list.append(li);
+ }return list;
+}
+function fleetTable(label,items){
+ const section=el('section',undefined,'fleet-group');section.append(el('h2',`${label}　${items.length}編成`));const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),hr=el('tr');for(const h of ['','編成','現在の判定','根拠'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');
+ if(!items.length){const row=el('tr'),cell=el('td','該当する編成はありません','empty-row');cell.colSpan=4;row.append(cell);body.append(row);}
+ items.forEach((item,index)=>{const row=el('tr',undefined,'fleet-row '+item.kind);row.append(el('td',String(index+1),'fleet-number'));const name=el('td'),link=(item.evidence||[]).find(x=>x.source==='hub'&&x.url);if(link){const a=el('a',item.formation,'fleet-name');a.href=link.url;a.target='_blank';a.rel='noopener';name.append(a);}else name.append(el('span',item.formation,'fleet-name'));if(item.seriesName)name.append(el('div',item.seriesName,'fleet-note'));row.append(name);const current=el('td');current.append(el('span',item.source==='hub'?'運用Hub':'ログから推定','source'+(item.source==='log'?' log':'')),el('div',item.status));if(item.updatedAt)current.append(el('div','更新：'+time(item.updatedAt),'fleet-note'));row.append(current);const evidence=el('td');evidence.append(evidenceList(item));row.append(evidence);body.append(row);});
+ table.append(body);wrap.append(table);section.append(wrap);return section;
+}
+async function loadFleet(force=false){const button=$('refreshFleet');button.disabled=true;$('error').textContent='';try{const data=await api('/api/fleet-status',{method:force?'POST':'GET'}),groups=new Map();for(const item of data.items||[]){if(!groups.has(item.category))groups.set(item.category,[]);groups.get(item.category).push(item);}const order=[...categoryOrder,...[...groups.keys()].filter(x=>!categoryOrder.includes(x)).sort((a,b)=>a.localeCompare(b,'ja'))];$('fleetTables').replaceChildren(...order.map(group=>fleetTable(group,groups.get(group)||[])));$('fleetSummary').replaceChildren(el('span',`掲載 ${data.items?.length||0}編成`),el('span',`Hub確認 ${time(data.fetchedAt)}`));fleetLoaded=true;}catch(e){error(e);}finally{button.disabled=false;}}
 async function open(){ $('loginPanel').hidden=true;$('main').hidden=false;await load(); }
 $('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
 $('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);
+$('logTab').onclick=()=>showView('log');$('fleetTab').onclick=()=>showView('fleet');$('refreshFleet').onclick=()=>loadFleet(true);
 $('logout').onclick=()=>{token='';sessionStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;};
 $('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};
 setInterval(()=>{if(token&&!document.hidden)void status();},30000);
