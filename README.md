@@ -9,22 +9,7 @@
 - ログ画面：https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html
 - ログ閲覧パスワードはCloudflareのSecretで管理します。リポジトリには保存しません。
 
-Worker・D1・毎分Cronは今回Cloudflareへ作成・設定しています。ローカルのGit・既存フロント・Renderのコードは、下記の更新をpushして反映してください。
-
-## 今回ユーザー側で行うこと
-
-1. ZIPを展開し、`nankai-tracker-v1.3.1` の中身を既存 `nankai-tracker` へ追加・上書き。
-2. `constants.js`・`assets`・`style.css`・`ui.js`・`train-kind.js` 等の既存ファイルは削除しない。
-3. `.gitignore` に独自設定がある場合は上書きではなく項目を統合。
-4. 既存フォルダでPowerShellを開いて以下を実行。
-
-```powershell
-git add .
-git commit -m "Cloudflareで定期外ログを常時監視"
-git push
-```
-
-前回のコミットは取り消さず、新しいコミットを重ねます。今回のserver.jsはRenderの保存先設定を要求しません。RenderのBuild Commandは `npm ci`、Start Commandは `npm start` です。Node.js 22以上が必要です（既にそれ以上なら変更不要）。
+Worker・D1・毎分Cron、GitHubの `main`、RenderへのVer 1.3.1の反映は完了しています。今回のserver.jsはRenderの保存先設定を要求しません。RenderのBuild Commandは `npm ci`、Start Commandは `npm start` です。Node.js 22以上が必要です。
 
 `LOG_WORKER_URL` は任意です。未設定でも今回のCloudflare URLへ転送します。古い `NANKAI_ACCESS_PASSWORD`、`LOGGER_DATA_DIR`、`LOGGER_ENABLED` は新server.jsでは使用しません。
 
