@@ -29,4 +29,33 @@ test('毎分Cronは同一分の二重実行を避ける',async()=>{const db=data
 test('深夜運行日・回送の列番・編成スロット不整合',()=>{assert.equal(core.serviceDate('2026-10-28T18:59:59Z'),'2026-10-28');assert.equal(core.serviceDate('2026-10-28T19:00:00Z'),'2026-10-29');assert.equal(core.numberKey('回０２０１'),'201');assert.equal(core.ignoredTrain('００８８'),true);assert.equal(core.formation(t('9991',{car_counts:[0,4]})).verified,false);});
 test('既知の試運転・回送列番を注記する',()=>{assert.equal(core.specialService('０８３７６','2026-10-30').label,'千代田出場試運転（上り）');assert.equal(core.specialService('8679','2026-10-30').label,'千代田出場試運転（下り）');assert.match(core.specialService('9185','2026-10-30').label,/廃車回送/);assert.match(core.specialService('8680','2026-10-30').schedule,/17:01/);assert.match(core.specialService('8722','2026-10-30').note,/サザン/);assert.match(core.specialService('8673','2026-10-31').schedule,/土日/);assert.match(core.specialService('8070','2026-10-30').schedule,/10:52/);assert.equal(core.specialService('9991','2026-10-30'),null);});
 test('駅IDを駅名に変換し、初回・最終確認地点を表す',()=>{assert.equal(stations.stationName(29),'羽倉崎');assert.equal(stations.stationName(95),'なんば');assert.equal(stations.stationName(154),'栂・美木多');assert.equal(stations.stationName(75),'泉佐野');assert.equal(stations.stationLabel(78),null);assert.equal(stations.stationPosition({station_id:7,next_station_id:null,direction:'down'}).text,'住ノ江駅（停車中）');assert.equal(stations.stationPosition({station_id:29,next_station_id:28,direction:'up'}).text,'羽倉崎駅～泉佐野駅間（走行中）');assert.equal(stations.stationPosition({station_id:118,next_station_id:78,direction:'up'}).text,'千代田駅付近（走行中）');assert.match(stations.observedRange({station_id:29,next_station_id:28},{station_id:7,next_station_id:null}).text,/初回：羽倉崎駅～泉佐野駅間.*最終：住ノ江駅/);});
+test('高野線の異常な次駅IDを前後の軌跡から隣駅に補正する',()=>{
+ const payloads=[
+  {line_id:2,station_id:118,next_station_id:78,direction:'up'},
+  {line_id:2,station_id:117,next_station_id:77,direction:'up'},
+  {line_id:2,station_id:116,next_station_id:76,direction:'up'},
+  {line_id:2,station_id:116,next_station_id:null,direction:'up'},
+  {line_id:2,station_id:115,next_station_id:75,direction:'up'},
+  {line_id:2,station_id:115,next_station_id:null,direction:'up'},
+  {line_id:2,station_id:102,next_station_id:62,direction:'up'},
+  {line_id:2,station_id:102,next_station_id:null,direction:'up'}
+ ];
+ const positions=stations.trajectoryPositions(payloads,{eventStart:true});
+ assert.equal(positions[0].text,'千代田工場');
+ assert.equal(positions[1].text,'滝谷駅～金剛駅間（走行中）');
+ assert.equal(positions[2].text,'滝谷駅～金剛駅間（走行中）');
+ assert.equal(positions[4].text,'金剛駅～大阪狭山市駅間（走行中）');
+ assert.equal(positions[6].text,'沢ノ町駅～住吉東駅間（走行中）');
+ assert.ok(positions.filter(p=>p.running).every(p=>!/りんくうタウン|関西空港|泉佐野|伽羅橋/.test(p.text)));
+ const entry=stations.trajectoryPositions([{line_id:2,station_id:117,next_station_id:null,direction:'down'},{line_id:2,station_id:118,next_station_id:78,direction:'down'}],{eventEnd:true});
+ assert.equal(entry[1].text,'千代田工場');
+});
+test('ログAPIで既存の9474型軌跡も千代田工場・隣駅間に補正する',async()=>{const db=database();try{
+ const payloads=[t('9474',{line_id:2,station_id:118,next_station_id:78,direction:'up'}),t('9474',{line_id:2,station_id:117,next_station_id:77,direction:'up'}),t('9474',{line_id:2,station_id:116,next_station_id:76,direction:'up'}),t('9474',{line_id:2,station_id:116,next_station_id:null,direction:'up'})],form=JSON.stringify(core.formation(payloads.at(-1)));
+ await db.prepare('INSERT INTO events(service_date,group_name,train_key,train_number,first_seen,last_seen,formation,baseline,last_payload) VALUES (?,?,?,?,?,?,?,?,?)').bind('2026-10-29','koya','9474','9474','2026-10-29T11:15:00.000Z','2026-10-29T11:18:00.000Z',form,'[]',JSON.stringify(payloads.at(-1))).run();const event=await db.prepare('SELECT id FROM events').first();
+ for(const [index,payload] of payloads.entries()){const time=`2026-10-29T11:${15+index}:00.000Z`;await db.prepare('INSERT INTO observations(event_id,source_time,observed_at,payload) VALUES (?,?,?,?)').bind(event.id,time,time,JSON.stringify(payload)).run();}
+ const password='test-password',env={DB:db,LOG_ACCESS_PASSWORD:password,ASSETS:{fetch:async()=>new Response('page')}},headers={Authorization:`Bearer ${await issue(password)}`};
+ const list=await (await handle(new Request('https://example.com/api/logs',{headers}),env)).json();assert.equal(list.items[0].first_position.text,'千代田工場');assert.match(list.items[0].observed_range.text,/初回：千代田工場/);
+ const history=await (await handle(new Request(`https://example.com/api/logs/${event.id}/observations`,{headers}),env)).json();assert.equal(history.items[0].position.text,'千代田工場');assert.equal(history.items[1].position.text,'滝谷駅～金剛駅間（走行中）');assert.equal(history.next,null);
+ }finally{db.raw.close();}});
 test('Renderは保存先なしで起動・南海線詳細を公開・ログ画面に転送',async()=>{const {createRequire}=await import('node:module');const require=createRequire(import.meta.url);const {createApp}=require('../../server.js');const old=process.env.LOG_WORKER_URL;delete process.env.LOG_WORKER_URL;const app=createApp({detailRequest:async()=>Response.json({result:'OK'})}),server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const u='http://127.0.0.1:'+server.address().port;try{assert.equal((await fetch(u+'/')).status,200);assert.equal((await fetch(u+'/api/train?dia_kind=1&train_number=0201')).status,200);assert.equal((await fetch(u+'/logs.html',{redirect:'manual'})).headers.get('location'),'https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html');process.env.LOG_WORKER_URL='https://example.workers.dev';assert.equal((await fetch(u+'/logs.html',{redirect:'manual'})).headers.get('location'),'https://example.workers.dev/logs.html');}finally{if(old===undefined)delete process.env.LOG_WORKER_URL;else process.env.LOG_WORKER_URL=old;await new Promise(r=>server.close(r));}});

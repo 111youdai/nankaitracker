@@ -223,6 +223,19 @@ var require_stations = __commonJS({
       155: "\u5149\u660E\u6C60",
       156: "\u548C\u6CC9\u4E2D\u592E"
     });
+    var range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    var ROUTES = Object.freeze([
+      Object.freeze(range(1, 41)),
+      Object.freeze([41, 42]),
+      Object.freeze([61, 62, 63]),
+      Object.freeze([75, 76, 77]),
+      Object.freeze([84, 83, 82, 81]),
+      Object.freeze(range(87, 94)),
+      Object.freeze(range(95, 136)),
+      Object.freeze(range(151, 156)),
+      Object.freeze(range(137, 142))
+    ]);
+    var KOYA_ROUTES = Object.freeze([ROUTES[6], ROUTES[7]]);
     function stationName(value) {
       const id = Number(value);
       return Number.isInteger(id) ? STATION_NAMES[id] || null : null;
@@ -231,21 +244,93 @@ var require_stations = __commonJS({
       const name = stationName(value);
       return name ? `${name}\u99C5` : null;
     }
-    function stationPosition2(payload = {}) {
+    function routeContaining(id, routes = ROUTES) {
+      const n = Number(id);
+      return routes.find((route) => route.includes(n)) || null;
+    }
+    function routeIndex(payload, routes = ROUTES) {
+      const route = routeContaining(payload?.station_id, routes);
+      return route ? { route, index: route.indexOf(Number(payload.station_id)) } : null;
+    }
+    function adjacentOnRoute(a, b) {
+      const route = routeContaining(a);
+      return !!route && route.includes(Number(b)) && Math.abs(route.indexOf(Number(a)) - route.indexOf(Number(b))) === 1;
+    }
+    function directionStep(direction) {
+      return String(direction || "").toLowerCase() === "up" ? -1 : String(direction || "").toLowerCase() === "down" ? 1 : 0;
+    }
+    function sameRouteIndex(payload, route) {
+      const index = route.indexOf(Number(payload?.station_id));
+      return index < 0 ? null : index;
+    }
+    function koyaInferredSegment(payload, previous, next) {
+      const found = routeIndex(payload, KOYA_ROUTES), step = directionStep(payload.direction);
+      if (!found || !step) return null;
+      const { route, index } = found, previousIndex = sameRouteIndex(previous, route), nextIndex = sameRouteIndex(next, route);
+      let from = null, to = null;
+      if (nextIndex === index + step) {
+        from = index;
+        to = nextIndex;
+      } else if (nextIndex === index) {
+        from = index - step;
+        to = index;
+      } else if (previousIndex === index - step) {
+        from = previousIndex;
+        to = index;
+      } else if (previousIndex === index) {
+        from = index;
+        to = index + step;
+      }
+      if (from == null || to == null || !route[from] || !route[to]) return null;
+      return `${stationLabel(route[from])}\uFF5E${stationLabel(route[to])}\u9593\uFF08\u8D70\u884C\u4E2D\uFF09`;
+    }
+    function nextDifferent(payloads, index, direction = 1) {
+      const id = Number(payloads[index]?.station_id);
+      for (let i = index + direction; i >= 0 && i < payloads.length; i += direction) {
+        const candidate = payloads[i];
+        if (Number(candidate?.station_id) !== id) return candidate;
+      }
+      return null;
+    }
+    function chiyodaWorks(payloads, index, { eventStart = false, eventEnd = false } = {}) {
+      const payload = payloads[index], id = Number(payload?.station_id), marker = Number(payload?.next_station_id), direction = String(payload?.direction || "").toLowerCase();
+      if (id !== 118 || marker !== 78) return null;
+      const next = nextDifferent(payloads, index, 1), previous = nextDifferent(payloads, index, -1);
+      if (eventStart && index === 0 && direction === "up" && [116, 117].includes(Number(next?.station_id))) return "\u5343\u4EE3\u7530\u5DE5\u5834";
+      if (eventEnd && index === payloads.length - 1 && direction === "down" && [116, 117].includes(Number(previous?.station_id))) return "\u5343\u4EE3\u7530\u5DE5\u5834";
+      return null;
+    }
+    function position(payload = {}, previous = null, nextPayload = null, works = null) {
       const current = stationLabel(payload.station_id), hasNext = payload.next_station_id != null && payload.next_station_id !== "";
       const next = hasNext ? stationLabel(payload.next_station_id) : null, direction = String(payload.direction || "").toLowerCase();
       const directionLabel = direction === "up" ? "\u4E0A\u308A" : direction === "down" ? "\u4E0B\u308A" : "\u65B9\u5411\u4E0D\u660E";
       let text = "\u4F4D\u7F6E\u4E0D\u660E";
-      if (current && hasNext) text = next ? `${current}\uFF5E${next}\u9593\uFF08\u8D70\u884C\u4E2D\uFF09` : `${current}\u4ED8\u8FD1\uFF08\u8D70\u884C\u4E2D\uFF09`;
-      else if (!current && next) text = `${next}\u624B\u524D\uFF08\u8D70\u884C\u4E2D\uFF09`;
+      let corrected = false, correction = null;
+      if (works) {
+        text = works;
+        corrected = true;
+        correction = "chiyoda-works";
+      } else if (current && hasNext && next && adjacentOnRoute(payload.station_id, payload.next_station_id)) text = `${current}\uFF5E${next}\u9593\uFF08\u8D70\u884C\u4E2D\uFF09`;
+      else if (current && hasNext) {
+        const inferred = Number(payload.line_id) === 2 ? koyaInferredSegment(payload, previous, nextPayload) : null;
+        text = inferred || `${current}\u4ED8\u8FD1\uFF08\u8D70\u884C\u4E2D\uFF09`;
+        corrected = true;
+        correction = inferred ? "adjacent-stations" : "invalid-next-station";
+      } else if (!current && next) text = `${next}\u624B\u524D\uFF08\u8D70\u884C\u4E2D\uFF09`;
       else if (current) text = `${current}\uFF08\u505C\u8ECA\u4E2D\uFF09`;
-      return { stationId: payload.station_id ?? null, nextStationId: payload.next_station_id ?? null, current, next, running: hasNext, direction, directionLabel, text };
+      return { stationId: payload.station_id ?? null, nextStationId: payload.next_station_id ?? null, current, next, running: hasNext, direction, directionLabel, text, corrected, correction };
     }
-    function observedRange2(first, last) {
-      const start = stationPosition2(first), end = stationPosition2(last);
+    function trajectoryPositions2(payloads = [], options = {}) {
+      return payloads.map((payload, index) => position(payload, payloads[index - 1] || null, payloads[index + 1] || null, chiyodaWorks(payloads, index, options)));
+    }
+    function stationPosition(payload = {}) {
+      return position(payload);
+    }
+    function observedRange(first, last) {
+      const start = stationPosition(first), end = stationPosition(last);
       return { first: start, last: end, text: `\u521D\u56DE\uFF1A${start.text} \uFF0F \u6700\u7D42\uFF1A${end.text}` };
     }
-    module.exports = { STATION_NAMES, stationName, stationLabel, stationPosition: stationPosition2, observedRange: observedRange2 };
+    module.exports = { STATION_NAMES, ROUTES, stationName, stationLabel, stationPosition, trajectoryPositions: trajectoryPositions2, observedRange };
   }
 });
 
@@ -401,7 +486,7 @@ async function samePassword(a, b) {
 var import_core2 = __toESM(require_core(), 1);
 var import_stations = __toESM(require_stations(), 1);
 var { specialService } = import_core2.default;
-var { stationPosition, observedRange } = import_stations.default;
+var { trajectoryPositions } = import_stations.default;
 var json = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json;charset=UTF-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 async function handle(request, env) {
   const u = new URL(request.url), p = u.pathname, db = env.DB;
@@ -433,7 +518,11 @@ async function handle(request, env) {
         const date = u.searchParams.get("date") || "", group = u.searchParams.get("group") || "", q = (u.searchParams.get("q") || "").slice(0, 80), before = Number(u.searchParams.get("before") || Number.MAX_SAFE_INTEGER);
         if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date) || group && !["nankai", "koya"].includes(group) || !Number.isSafeInteger(before) || before < 1) return json({ error: "\u691C\u7D22\u6761\u4EF6\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
         const ignored = import_core2.default.IGNORED_TRAIN_KEYS;
-        let sql = `SELECT events.*,(SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload FROM events WHERE id<?${ignored.length ? ` AND train_key NOT IN (${ignored.map(() => "?").join(",")})` : ""}`, args = [before, ...ignored];
+        let sql = `SELECT events.*,
+     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload,
+     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1 OFFSET 1) AS second_payload,
+     (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time DESC,o.id DESC LIMIT 1 OFFSET 1) AS previous_payload
+     FROM events WHERE id<?${ignored.length ? ` AND train_key NOT IN (${ignored.map(() => "?").join(",")})` : ""}`, args = [before, ...ignored];
         if (date) {
           sql += " AND service_date=?";
           args.push(date);
@@ -448,8 +537,10 @@ async function handle(request, env) {
         }
         const rows = (await db.prepare(sql + " ORDER BY id DESC LIMIT 100").bind(...args).all()).results;
         const items = rows.map((e) => {
-          const first = JSON.parse(e.first_payload || e.last_payload), last = JSON.parse(e.last_payload);
-          return { ...e, formation: JSON.parse(e.formation), baseline: JSON.parse(e.baseline), first_payload: first, last_payload: last, first_position: stationPosition(first), last_position: stationPosition(last), observed_range: observedRange(first, last), special: specialService(e.train_number, e.service_date) };
+          const { second_payload, previous_payload, ...event } = e, first = JSON.parse(e.first_payload || e.last_payload), second = second_payload ? JSON.parse(second_payload) : null, previous = previous_payload ? JSON.parse(previous_payload) : null, last = JSON.parse(e.last_payload);
+          const firstPosition = trajectoryPositions(second ? [first, second] : [first], { eventStart: true })[0];
+          const lastPositions = trajectoryPositions(previous ? [previous, last] : [last], { eventEnd: true }), lastPosition = lastPositions.at(-1);
+          return { ...event, formation: JSON.parse(e.formation), baseline: JSON.parse(e.baseline), first_payload: first, last_payload: last, first_position: firstPosition, last_position: lastPosition, observed_range: { first: firstPosition, last: lastPosition, text: `\u521D\u56DE\uFF1A${firstPosition.text} \uFF0F \u6700\u7D42\uFF1A${lastPosition.text}` }, special: specialService(e.train_number, e.service_date) };
         });
         return json({ items, next: items.length === 100 ? items.at(-1).id : null });
       }
@@ -457,11 +548,8 @@ async function handle(request, env) {
       if (m) {
         const id = Number(m[1]), after = Number(u.searchParams.get("after") || 0);
         if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(after) || after < 0) return json({ error: "ID\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
-        const rows = (await db.prepare("SELECT * FROM observations WHERE event_id=? AND id>? ORDER BY id LIMIT 500").bind(id, after).all()).results;
-        return json({ items: rows.map((r) => {
-          const payload = JSON.parse(r.payload);
-          return { ...r, payload, position: stationPosition(payload) };
-        }), next: rows.length === 500 ? rows.at(-1).id : null });
+        const rows = (await db.prepare("SELECT * FROM observations WHERE event_id=? AND id>? ORDER BY id LIMIT 501").bind(id, after).all()).results, hasMore = rows.length > 500, page = rows.slice(0, 500), payloads = rows.map((r) => JSON.parse(r.payload)), positions = trajectoryPositions(payloads, { eventStart: after === 0, eventEnd: !hasMore });
+        return json({ items: page.map((r, index) => ({ ...r, payload: payloads[index], position: positions[index] })), next: hasMore ? page.at(-1).id : null });
       }
       return json({ error: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
     }
