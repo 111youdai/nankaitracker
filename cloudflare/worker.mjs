@@ -1,7 +1,9 @@
 import {poll,refresh,read,put} from './data.mjs';
 import {issue,authorized,samePassword} from './auth.mjs';
 import core from './core.cjs';
+import stations from './stations.cjs';
 const {specialService}=core;
+const {stationPosition,observedRange}=stations;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
@@ -27,17 +29,17 @@ export async function handle(request,env){
     const date=u.searchParams.get('date')||'',group=u.searchParams.get('group')||'',q=(u.searchParams.get('q')||'').slice(0,80),before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
     if((date&&!/^\d{4}-\d{2}-\d{2}$/.test(date))||(group&&!['nankai','koya'].includes(group))||!Number.isSafeInteger(before)||before<1)return json({error:'検索条件が不正です'},400);
     const ignored=core.IGNORED_TRAIN_KEYS;
-    let sql=`SELECT * FROM events WHERE id<?${ignored.length?` AND train_key NOT IN (${ignored.map(()=>'?').join(',')})`:''}`,args=[before,...ignored];
+    let sql=`SELECT events.*,(SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload FROM events WHERE id<?${ignored.length?` AND train_key NOT IN (${ignored.map(()=>'?').join(',')})`:''}`,args=[before,...ignored];
     if(date){sql+=' AND service_date=?';args.push(date);}if(group){sql+=' AND group_name=?';args.push(group);}
     if(q){sql+=' AND (train_number LIKE ? OR formation LIKE ? OR EXISTS(SELECT 1 FROM observations o WHERE o.event_id=events.id AND o.payload LIKE ?))';args.push(`%${q}%`,`%${q}%`,`%${q}%`);}
     const rows=(await db.prepare(sql+' ORDER BY id DESC LIMIT 100').bind(...args).all()).results;
-    const items=rows.map(e=>({...e,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),last_payload:JSON.parse(e.last_payload),special:specialService(e.train_number,e.service_date)}));
+    const items=rows.map(e=>{const first=JSON.parse(e.first_payload||e.last_payload),last=JSON.parse(e.last_payload);return {...e,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:stationPosition(first),last_position:stationPosition(last),observed_range:observedRange(first,last),special:specialService(e.train_number,e.service_date)};});
     return json({items,next:items.length===100?items.at(-1).id:null});
    }
    const m=p.match(/^\/api\/logs\/(\d+)\/observations$/);
    if(m){const id=Number(m[1]),after=Number(u.searchParams.get('after')||0);if(!Number.isSafeInteger(id)||id<1||!Number.isSafeInteger(after)||after<0)return json({error:'IDが不正です'},400);
     const rows=(await db.prepare('SELECT * FROM observations WHERE event_id=? AND id>? ORDER BY id LIMIT 500').bind(id,after).all()).results;
-    return json({items:rows.map(r=>({...r,payload:JSON.parse(r.payload)})),next:rows.length===500?rows.at(-1).id:null});
+    return json({items:rows.map(r=>{const payload=JSON.parse(r.payload);return {...r,payload,position:stationPosition(payload)};}),next:rows.length===500?rows.at(-1).id:null});
    }
    return json({error:'見つかりません'},404);
   }

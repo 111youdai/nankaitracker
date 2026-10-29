@@ -103,6 +103,152 @@ var require_core = __commonJS({
   }
 });
 
+// stations.cjs
+var require_stations = __commonJS({
+  "stations.cjs"(exports, module) {
+    "use strict";
+    var STATION_NAMES = Object.freeze({
+      1: "\u306A\u3093\u3070",
+      2: "\u65B0\u4ECA\u5BAE",
+      3: "\u5929\u4E0B\u8336\u5C4B",
+      4: "\u5CB8\u91CC\u7389\u51FA",
+      5: "\u7C89\u6D5C",
+      6: "\u4F4F\u5409\u5927\u793E",
+      7: "\u4F4F\u30CE\u6C5F",
+      8: "\u4E03\u9053",
+      9: "\u583A",
+      10: "\u6E4A",
+      11: "\u77F3\u6D25\u5DDD",
+      12: "\u8ACF\u8A2A\u30CE\u68EE",
+      13: "\u6D5C\u5BFA\u516C\u5712",
+      14: "\u7FBD\u8863",
+      15: "\u9AD8\u77F3",
+      16: "\u5317\u52A9\u677E",
+      17: "\u677E\u30CE\u6D5C",
+      18: "\u6CC9\u5927\u6D25",
+      19: "\u5FE0\u5CA1",
+      20: "\u6625\u6728",
+      21: "\u548C\u6CC9\u5927\u5BAE",
+      22: "\u5CB8\u548C\u7530",
+      23: "\u86F8\u5730\u8535",
+      24: "\u8C9D\u585A",
+      25: "\u4E8C\u8272\u6D5C",
+      26: "\u9DB4\u539F",
+      27: "\u4E95\u539F\u91CC",
+      28: "\u6CC9\u4F50\u91CE",
+      29: "\u7FBD\u5009\u5D0E",
+      30: "\u5409\u898B\u30CE\u91CC",
+      31: "\u5CA1\u7530\u6D66",
+      32: "\u6A3D\u4E95",
+      33: "\u5C3E\u5D0E",
+      34: "\u9CE5\u53D6\u30CE\u8358",
+      35: "\u7BB1\u4F5C",
+      36: "\u6DE1\u8F2A",
+      37: "\u307F\u3055\u304D\u516C\u5712",
+      38: "\u5B5D\u5B50",
+      39: "\u548C\u6B4C\u5C71\u5927\u5B66\u524D",
+      40: "\u7D00\u30CE\u5DDD",
+      41: "\u548C\u6B4C\u5C71\u5E02",
+      42: "\u548C\u6B4C\u5C71\u6E2F",
+      61: "\u7FBD\u8863",
+      62: "\u4F3D\u7F85\u6A4B",
+      63: "\u9AD8\u5E2B\u6D5C",
+      75: "\u6CC9\u4F50\u91CE",
+      76: "\u308A\u3093\u304F\u3046\u30BF\u30A6\u30F3",
+      77: "\u95A2\u897F\u7A7A\u6E2F",
+      81: "\u591A\u5948\u5DDD",
+      82: "\u6DF1\u65E5\u6E2F",
+      83: "\u6DF1\u65E5\u753A",
+      84: "\u307F\u3055\u304D\u516C\u5712",
+      87: "\u7D00\u30CE\u5DDD",
+      88: "\u6771\u677E\u6C5F",
+      89: "\u4E2D\u677E\u6C5F",
+      90: "\u516B\u5E61\u524D",
+      91: "\u897F\u30CE\u5E84",
+      92: "\u4E8C\u91CC\u30B1\u6D5C",
+      93: "\u78EF\u30CE\u6D66",
+      94: "\u52A0\u592A",
+      95: "\u306A\u3093\u3070",
+      96: "\u4ECA\u5BAE\u620E",
+      97: "\u65B0\u4ECA\u5BAE",
+      98: "\u8429\u30CE\u8336\u5C4B",
+      99: "\u5929\u4E0B\u8336\u5C4B",
+      100: "\u5CB8\u91CC\u7389\u51FA",
+      101: "\u5E1D\u585A\u5C71",
+      102: "\u4F4F\u5409\u6771",
+      103: "\u6CA2\u30CE\u753A",
+      104: "\u6211\u5B6B\u5B50\u524D",
+      105: "\u6D45\u9999\u5C71",
+      106: "\u583A\u6771",
+      107: "\u4E09\u56FD\u30B1\u4E18",
+      108: "\u767E\u820C\u9CE5\u516B\u5E61",
+      109: "\u4E2D\u767E\u820C\u9CE5",
+      110: "\u767D\u9DFA",
+      111: "\u521D\u829D",
+      112: "\u8429\u539F\u5929\u795E",
+      113: "\u5317\u91CE\u7530",
+      114: "\u72ED\u5C71",
+      115: "\u5927\u962A\u72ED\u5C71\u5E02",
+      116: "\u91D1\u525B",
+      117: "\u6EDD\u8C37",
+      118: "\u5343\u4EE3\u7530",
+      119: "\u6CB3\u5185\u9577\u91CE",
+      120: "\u4E09\u65E5\u5E02\u753A",
+      121: "\u7F8E\u52A0\u306E\u53F0",
+      122: "\u5343\u65E9\u53E3",
+      123: "\u5929\u898B",
+      124: "\u7D00\u898B\u5CE0",
+      125: "\u6797\u9593\u7530\u5712\u90FD\u5E02",
+      126: "\u5FA1\u5E78\u8FBB",
+      127: "\u6A4B\u672C",
+      128: "\u7D00\u4F0A\u6E05\u6C34",
+      129: "\u5B66\u6587\u8DEF",
+      130: "\u4E5D\u5EA6\u5C71",
+      131: "\u9AD8\u91CE\u4E0B",
+      132: "\u4E0B\u53E4\u6CA2",
+      133: "\u4E0A\u53E4\u6CA2",
+      134: "\u7D00\u4F0A\u7D30\u5DDD",
+      135: "\u7D00\u4F0A\u795E\u8C37",
+      136: "\u6975\u697D\u6A4B",
+      137: "\u6C50\u898B\u6A4B",
+      138: "\u82A6\u539F\u753A",
+      139: "\u6728\u6D25\u5DDD",
+      140: "\u6D25\u5B88",
+      141: "\u897F\u5929\u4E0B\u8336\u5C4B",
+      142: "\u5CB8\u91CC\u7389\u51FA",
+      151: "\u4E2D\u767E\u820C\u9CE5",
+      152: "\u6DF1\u4E95",
+      153: "\u6CC9\u30B1\u4E18",
+      154: "\u6802\u30FB\u7F8E\u6728\u591A",
+      155: "\u5149\u660E\u6C60",
+      156: "\u548C\u6CC9\u4E2D\u592E"
+    });
+    function stationName(value) {
+      const id = Number(value);
+      return Number.isInteger(id) ? STATION_NAMES[id] || null : null;
+    }
+    function stationLabel(value) {
+      const name = stationName(value);
+      return name ? `${name}\u99C5` : null;
+    }
+    function stationPosition2(payload = {}) {
+      const current = stationLabel(payload.station_id), hasNext = payload.next_station_id != null && payload.next_station_id !== "";
+      const next = hasNext ? stationLabel(payload.next_station_id) : null, direction = String(payload.direction || "").toLowerCase();
+      const directionLabel = direction === "up" ? "\u4E0A\u308A" : direction === "down" ? "\u4E0B\u308A" : "\u65B9\u5411\u4E0D\u660E";
+      let text = "\u4F4D\u7F6E\u4E0D\u660E";
+      if (current && hasNext) text = next ? `${current}\uFF5E${next}\u9593\uFF08\u8D70\u884C\u4E2D\uFF09` : `${current}\u4ED8\u8FD1\uFF08\u8D70\u884C\u4E2D\uFF09`;
+      else if (!current && next) text = `${next}\u624B\u524D\uFF08\u8D70\u884C\u4E2D\uFF09`;
+      else if (current) text = `${current}\uFF08\u505C\u8ECA\u4E2D\uFF09`;
+      return { stationId: payload.station_id ?? null, nextStationId: payload.next_station_id ?? null, current, next, running: hasNext, direction, directionLabel, text };
+    }
+    function observedRange2(first, last) {
+      const start = stationPosition2(first), end = stationPosition2(last);
+      return { first: start, last: end, text: `\u521D\u56DE\uFF1A${start.text} \uFF0F \u6700\u7D42\uFF1A${end.text}` };
+    }
+    module.exports = { STATION_NAMES, stationName, stationLabel, stationPosition: stationPosition2, observedRange: observedRange2 };
+  }
+});
+
 // data.mjs
 var import_core = __toESM(require_core(), 1);
 var { tableNumbers, numberKey, ignoredTrain, formation } = import_core.default;
@@ -253,7 +399,9 @@ async function samePassword(a, b) {
 
 // worker.mjs
 var import_core2 = __toESM(require_core(), 1);
+var import_stations = __toESM(require_stations(), 1);
 var { specialService } = import_core2.default;
+var { stationPosition, observedRange } = import_stations.default;
 var json = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json;charset=UTF-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 async function handle(request, env) {
   const u = new URL(request.url), p = u.pathname, db = env.DB;
@@ -285,7 +433,7 @@ async function handle(request, env) {
         const date = u.searchParams.get("date") || "", group = u.searchParams.get("group") || "", q = (u.searchParams.get("q") || "").slice(0, 80), before = Number(u.searchParams.get("before") || Number.MAX_SAFE_INTEGER);
         if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date) || group && !["nankai", "koya"].includes(group) || !Number.isSafeInteger(before) || before < 1) return json({ error: "\u691C\u7D22\u6761\u4EF6\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
         const ignored = import_core2.default.IGNORED_TRAIN_KEYS;
-        let sql = `SELECT * FROM events WHERE id<?${ignored.length ? ` AND train_key NOT IN (${ignored.map(() => "?").join(",")})` : ""}`, args = [before, ...ignored];
+        let sql = `SELECT events.*,(SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload FROM events WHERE id<?${ignored.length ? ` AND train_key NOT IN (${ignored.map(() => "?").join(",")})` : ""}`, args = [before, ...ignored];
         if (date) {
           sql += " AND service_date=?";
           args.push(date);
@@ -299,7 +447,10 @@ async function handle(request, env) {
           args.push(`%${q}%`, `%${q}%`, `%${q}%`);
         }
         const rows = (await db.prepare(sql + " ORDER BY id DESC LIMIT 100").bind(...args).all()).results;
-        const items = rows.map((e) => ({ ...e, formation: JSON.parse(e.formation), baseline: JSON.parse(e.baseline), last_payload: JSON.parse(e.last_payload), special: specialService(e.train_number, e.service_date) }));
+        const items = rows.map((e) => {
+          const first = JSON.parse(e.first_payload || e.last_payload), last = JSON.parse(e.last_payload);
+          return { ...e, formation: JSON.parse(e.formation), baseline: JSON.parse(e.baseline), first_payload: first, last_payload: last, first_position: stationPosition(first), last_position: stationPosition(last), observed_range: observedRange(first, last), special: specialService(e.train_number, e.service_date) };
+        });
         return json({ items, next: items.length === 100 ? items.at(-1).id : null });
       }
       const m = p.match(/^\/api\/logs\/(\d+)\/observations$/);
@@ -307,7 +458,10 @@ async function handle(request, env) {
         const id = Number(m[1]), after = Number(u.searchParams.get("after") || 0);
         if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(after) || after < 0) return json({ error: "ID\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
         const rows = (await db.prepare("SELECT * FROM observations WHERE event_id=? AND id>? ORDER BY id LIMIT 500").bind(id, after).all()).results;
-        return json({ items: rows.map((r) => ({ ...r, payload: JSON.parse(r.payload) })), next: rows.length === 500 ? rows.at(-1).id : null });
+        return json({ items: rows.map((r) => {
+          const payload = JSON.parse(r.payload);
+          return { ...r, payload, position: stationPosition(payload) };
+        }), next: rows.length === 500 ? rows.at(-1).id : null });
       }
       return json({ error: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
     }
@@ -351,7 +505,7 @@ var worker_default = {
 };
 
 // <stdin>
-var pages = { "/logs.html": '<!doctype html>\n<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>\u5B9A\u671F\u5916\u30ED\u30B0 | \u5357\u6D77\u30C8\u30E9\u30C3\u30AB\u30FC</title>\n<style>\n:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0d1720;color:#e8f2f6}*{box-sizing:border-box}body{max-width:1100px;margin:auto;padding:24px}h1{margin:8px 0}small,.muted{color:#abc0ce}p{line-height:1.7}header{margin-bottom:24px}.label{color:#65e0ba;font-size:12px;letter-spacing:2px}.panel,article{border:1px solid #324550;border-radius:12px;background:#14232e;padding:18px;margin-bottom:14px}input,select,button{font:inherit;border-radius:7px;border:1px solid #48606e;padding:10px;background:#0d1720;color:inherit}button{cursor:pointer;background:#1b554b}button:disabled{opacity:.5;cursor:wait}form,.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;gap:6px;font-size:13px}#status{border-left:4px solid #e5b858}#status.ok{border-color:#65e0ba}.error{color:#ffc6b9}.top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}h2{font-size:22px;margin:0}.tag{background:#624b23;border-radius:5px;padding:4px 7px;font-size:12px}.tag.known{background:#12604d;color:#e2fff7}.known-service{margin-top:14px;padding:12px 14px;border-left:4px solid #65e0ba;border-radius:7px;background:#102d2b;display:grid;gap:5px}.known-service strong{color:#8ff0d2}.details{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:16px 0}.details b{display:block;margin-top:4px;font-size:15px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#0d1720;padding:12px;border-radius:7px}.history{margin-top:12px;border-top:1px solid #324550;padding-top:12px}#error{min-height:24px}a{color:#8ddac7}[hidden]{display:none!important}@media(max-width:540px){body{padding:14px}.details{grid-template-columns:1fr}input{max-width:100%}h1{font-size:26px}}\n</style></head><body>\n<header><span class="label">NANKAI TRACKER / RECORDS</span><h1>\u5B9A\u671F\u5916\u5217\u8ECA\u306E\u8A18\u9332</h1><p class="muted">Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3002\u5357\u6D77\u7DDA\u30FB\u9AD8\u91CE\u7DDA\u30FB\u6CC9\u5317\u7DDA\u30FB\u652F\u7DDA\u3002\u901A\u5E38\u306E\u5E73\u65E5\uFF0F\u4F11\u65E5\u30C0\u30A4\u30E4\u306B\u306A\u3044\u5217\u756A\u306E\u78BA\u8A8D\u5C65\u6B74\u3002</p></header>\n<section class="panel" id="loginPanel"><form id="login"><label>\u30ED\u30B0\u95B2\u89A7\u30D1\u30B9\u30EF\u30FC\u30C9<input id="password" type="password" required autocomplete="current-password"></label><button>\u30ED\u30B0\u3092\u958B\u304F</button></form></section>\n<div id="error" class="error" role="alert"></div>\n<main id="main" hidden><div class="panel" id="status" role="status">\u76E3\u8996\u72B6\u6CC1\u3092\u78BA\u8A8D\u4E2D\u2026</div>\n<div class="panel"><form id="filters"><label>\u904B\u884C\u65E5\uFF08\u5348\u524D4\u6642\u533A\u5207\u308A\uFF09<input id="date" type="date"></label><label>\u7CFB\u7D71<select id="group"><option value="">\u3059\u3079\u3066</option><option value="nankai">\u5357\u6D77\u7DDA\u7CFB\u7D71</option><option value="koya">\u9AD8\u91CE\u7DDA\u7CFB\u7D71</option></select></label><label>\u5217\u756A\u30FB\u7DE8\u6210\u756A\u53F7<input id="query" placeholder="\u4F8B\uFF1A8310"></label><button>\u691C\u7D22\u30FB\u66F4\u65B0</button><button type="button" id="export">\u691C\u7D22\u7D50\u679C\u3092JSON\u4FDD\u5B58</button><button type="button" id="logout">\u30ED\u30B0\u30A2\u30A6\u30C8</button></form></div>\n<p class="muted">\u300C\u5B9A\u671F\u5916\u5019\u88DC\u300D\u306F\u8A66\u904B\u8EE2\u30FB\u81E8\u6642\u56DE\u9001\u306E\u78BA\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u904B\u7528\u8868\u306E\u672A\u53CE\u9332\u30FB\u914D\u4FE1\u8AA4\u308A\u3082\u542B\u307F\u307E\u3059\u3002\u7DE8\u6210\u306FAPI\u306E\u7DE8\u6210\u756A\u53F7\u3067\u3001\u5168\u8ECA\u4E21\u306E\u8ECA\u756A\u4E00\u89A7\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002</p>\n<section id="events" aria-live="polite"></section><button id="more" hidden>\u7D9A\u304D\u3092\u8AAD\u307F\u8FBC\u3080</button>\n<p class="muted">\u53D6\u5F97\u5143\uFF1A<a href="https://unyohub.2pd.jp/" target="_blank" rel="noopener">\u9244\u9053\u904B\u7528Hub</a>\uFF08\u901A\u5E38\u30C0\u30A4\u30E4\u7167\u5408\uFF09\uFF0F\u5357\u6D77\u30A2\u30D7\u30EA\u914D\u4FE1\u30C7\u30FC\u30BF\uFF08\u5217\u756A\u30FB\u7DE8\u6210\u30FB\u4F4D\u7F6E\uFF09\u3002</p></main>\n<script src="logs.js"><\/script></body></html>\n', "/logs.js": "'use strict';\nconst $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';\nlet token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false;\nconst time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'\u672A\u78BA\u8A8D';\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nasync function api(url,options={}){\n const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});\n const data=await response.json();\n if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;\n}\nfunction error(e){$('error').textContent=e.message;}\nasync function status(){\n try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'\u30AF\u30E9\u30A6\u30C9\u3067\u76E3\u8996\u4E2D':'\u76E3\u8996\u30FB\u7167\u5408\u306E\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044'));\n box.append(el('p',`\u6700\u7D42\u53D6\u5F97\uFF1A${time(s.lastSuccess)} \uFF0F \u53D6\u5F97\u9593\u9694\uFF1A${s.intervalSeconds}\u79D2 \uFF0F \u7167\u5408\u5F85\u3061\uFF1A${s.pending}\u4EF6`));\n for(const [g,v] of Object.entries(s.groups))box.append(el('div',`${g==='nankai'?'\u5357\u6D77\u7DDA':'\u9AD8\u91CE\u7DDA'}\uFF1A${v.error||`\u914D\u4FE1\u6642\u523B ${time(v.sourceTime)}\u30FB${v.trainCount}\u5217\u8ECA`}`));\n if(s.refresh?.error)box.append(el('p','\u904B\u7528\u8868\u306E\u66F4\u65B0\u306B\u5931\u6557\uFF1A'+s.refresh.error,'error'));\n if(s.feedError||s.baselineError)box.append(el('p',[s.feedError,s.baselineError].filter(Boolean).join(' / '),'error'));\n if(s.baseline)box.append(el('small',`\u7167\u5408\u30C7\u30FC\u30BF\u66F4\u65B0\uFF1A${time(s.baseline.fetchedAt)}\u3002\u753B\u9762\u3092\u9589\u3058\u3066\u3082\u3001Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3092\u7D99\u7D9A\u3057\u307E\u3059\u3002`));\n }catch(e){$('status').className='panel';$('status').textContent='\u76E3\u8996\u72B6\u6CC1\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002\u76E3\u8996\u4E2D\u304B\u3069\u3046\u304B\u78BA\u8A8D\u3067\u304D\u306A\u3044\u72B6\u614B\u3067\u3059\u3002';error(e);}\n}\nasync function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}\nfunction card(e){\n const known=e.special,a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} \u5217\u8ECA`),el('span',known?.label||'\u5B9A\u671F\u5916\u5019\u88DC','tag'+(known?' known':'')));a.append(top);\n if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','\u533A\u9593\uFF1A'+known.route));if(known.schedule)box.append(el('div','\u6642\u523B\uFF1A'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}\n const d=el('div',undefined,'details');const p=e.last_payload;\n for(const [k,v] of [['\u7DE8\u6210\uFF08\u6700\u5F8C\u306B\u691C\u8A3C\u3067\u304D\u305F\u5024\uFF09',e.formation.text],['\u904B\u884C\u65E5\u30FB\u7CFB\u7D71',`${e.service_date} \uFF0F ${e.group_name==='nankai'?'\u5357\u6D77\u7DDA\u7CFB\u7D71':'\u9AD8\u91CE\u7DDA\u7CFB\u7D71'}`],['\u521D\u56DE \u2192 \u6700\u7D42\u78BA\u8A8D',`${time(e.first_seen)} \u2192 ${time(e.last_seen)}`],['\u6700\u7D42\u4F4D\u7F6E\uFF08API\u99C5ID\uFF09',`${p.station_id??'\u4E0D\u660E'} \u2192 ${p.next_station_id??'\u505C\u8ECA\u4E2D'} \uFF0F ${p.direction??'\u65B9\u5411\u4E0D\u660E'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);\n const button=el('button','\u78BA\u8A8D\u5C65\u6B74\u30FB\u5143\u30C7\u30FC\u30BF'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);\n button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const data=await allHistory(e.id);history.replaceChildren(el('p',`\u78BA\u8A8D\u5C65\u6B74 ${data.length}\u4EF6\u3002\u4F4D\u7F6E\u30FB\u7DE8\u6210\u306E\u5909\u5316\u306F\u5404\u6642\u70B9\u306E\u5143\u30C7\u30FC\u30BF\u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002`));for(const o of data){const row=el('details');row.append(el('summary',`${time(o.source_time)} \uFF0F \u53D7\u4FE1 ${time(o.observed_at)}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','\u7167\u5408\u3057\u305F\u904B\u7528\u8868'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};\n return a;\n}\nasync function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{\n if(reset){params=new URLSearchParams({date:$('date').value,group:$('group').value,q:$('query').value});next=null;}\n const query=new URLSearchParams(params);if(next)query.set('before',next);\n const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const e of data.items)$('events').append(card(e));\n if(reset&&!data.items.length)$('events').append(el('p','\u8A72\u5F53\u3059\u308B\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u76E3\u8996\u958B\u59CB\u524D\u306E\u5C65\u6B74\u306F\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002'));\n next=data.next;$('more').hidden=!next;await status();\n }catch(e){error(e);}finally{busy=false;}}\nasync function open(){ $('loginPanel').hidden=true;$('main').hidden=false;await load(); }\n$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};\n$('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);\n$('logout').onclick=()=>{token='';sessionStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;};\n$('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};\nsetInterval(()=>{if(token&&!document.hidden)void status();},30000);\nif(token)void open();\n" };
+var pages = { "/logs.html": '<!doctype html>\n<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>\u5B9A\u671F\u5916\u30ED\u30B0 | \u5357\u6D77\u30C8\u30E9\u30C3\u30AB\u30FC</title>\n<style>\n:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0d1720;color:#e8f2f6}*{box-sizing:border-box}body{max-width:1100px;margin:auto;padding:24px}h1{margin:8px 0}small,.muted{color:#abc0ce}p{line-height:1.7}header{margin-bottom:24px}.label{color:#65e0ba;font-size:12px;letter-spacing:2px}.panel,article{border:1px solid #324550;border-radius:12px;background:#14232e;padding:18px;margin-bottom:14px}input,select,button{font:inherit;border-radius:7px;border:1px solid #48606e;padding:10px;background:#0d1720;color:inherit}button{cursor:pointer;background:#1b554b}button:disabled{opacity:.5;cursor:wait}form,.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;gap:6px;font-size:13px}#status{border-left:4px solid #e5b858}#status.ok{border-color:#65e0ba}.error{color:#ffc6b9}.top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}h2{font-size:22px;margin:0}.tag{background:#624b23;border-radius:5px;padding:4px 7px;font-size:12px}.tag.known{background:#12604d;color:#e2fff7}.known-service{margin-top:14px;padding:12px 14px;border-left:4px solid #65e0ba;border-radius:7px;background:#102d2b;display:grid;gap:5px}.known-service strong{color:#8ff0d2}.details{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:16px 0}.details b{display:block;margin-top:4px;font-size:15px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#0d1720;padding:12px;border-radius:7px}.history{margin-top:12px;border-top:1px solid #324550;padding-top:12px}#error{min-height:24px}a{color:#8ddac7}[hidden]{display:none!important}@media(max-width:540px){body{padding:14px}.details{grid-template-columns:1fr}input{max-width:100%}h1{font-size:26px}}\n</style></head><body>\n<header><span class="label">NANKAI TRACKER / RECORDS</span><h1>\u5B9A\u671F\u5916\u5217\u8ECA\u306E\u8A18\u9332</h1><p class="muted">Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3002\u5357\u6D77\u7DDA\u30FB\u9AD8\u91CE\u7DDA\u30FB\u6CC9\u5317\u7DDA\u30FB\u652F\u7DDA\u3002\u901A\u5E38\u306E\u5E73\u65E5\uFF0F\u4F11\u65E5\u30C0\u30A4\u30E4\u306B\u306A\u3044\u5217\u756A\u306E\u78BA\u8A8D\u5C65\u6B74\u3002</p></header>\n<section class="panel" id="loginPanel"><form id="login"><label>\u30ED\u30B0\u95B2\u89A7\u30D1\u30B9\u30EF\u30FC\u30C9<input id="password" type="password" required autocomplete="current-password"></label><button>\u30ED\u30B0\u3092\u958B\u304F</button></form></section>\n<div id="error" class="error" role="alert"></div>\n<main id="main" hidden><div class="panel" id="status" role="status">\u76E3\u8996\u72B6\u6CC1\u3092\u78BA\u8A8D\u4E2D\u2026</div>\n<div class="panel"><form id="filters"><label>\u904B\u884C\u65E5\uFF08\u5348\u524D4\u6642\u533A\u5207\u308A\uFF09<input id="date" type="date"></label><label>\u7CFB\u7D71<select id="group"><option value="">\u3059\u3079\u3066</option><option value="nankai">\u5357\u6D77\u7DDA\u7CFB\u7D71</option><option value="koya">\u9AD8\u91CE\u7DDA\u7CFB\u7D71</option></select></label><label>\u5217\u756A\u30FB\u7DE8\u6210\u756A\u53F7<input id="query" placeholder="\u4F8B\uFF1A8310"></label><button>\u691C\u7D22\u30FB\u66F4\u65B0</button><button type="button" id="export">\u691C\u7D22\u7D50\u679C\u3092JSON\u4FDD\u5B58</button><button type="button" id="logout">\u30ED\u30B0\u30A2\u30A6\u30C8</button></form></div>\n<p class="muted">\u300C\u5B9A\u671F\u5916\u5019\u88DC\u300D\u306F\u8A66\u904B\u8EE2\u30FB\u81E8\u6642\u56DE\u9001\u306E\u78BA\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u904B\u7528\u8868\u306E\u672A\u53CE\u9332\u30FB\u914D\u4FE1\u8AA4\u308A\u3082\u542B\u307F\u307E\u3059\u3002\u7DE8\u6210\u306FAPI\u306E\u7DE8\u6210\u756A\u53F7\u3067\u3001\u5168\u8ECA\u4E21\u306E\u8ECA\u756A\u4E00\u89A7\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002</p>\n<section id="events" aria-live="polite"></section><button id="more" hidden>\u7D9A\u304D\u3092\u8AAD\u307F\u8FBC\u3080</button>\n<p class="muted">\u53D6\u5F97\u5143\uFF1A<a href="https://unyohub.2pd.jp/" target="_blank" rel="noopener">\u9244\u9053\u904B\u7528Hub</a>\uFF08\u901A\u5E38\u30C0\u30A4\u30E4\u7167\u5408\uFF09\uFF0F\u5357\u6D77\u30A2\u30D7\u30EA\u914D\u4FE1\u30C7\u30FC\u30BF\uFF08\u5217\u756A\u30FB\u7DE8\u6210\u30FB\u4F4D\u7F6E\uFF09\u3002</p></main>\n<script src="logs.js"><\/script></body></html>\n', "/logs.js": "'use strict';\nconst $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';\nlet token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false;\nconst time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'\u672A\u78BA\u8A8D';\nconst clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'\u6642\u523B\u4E0D\u660E';\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nasync function api(url,options={}){\n const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});\n const data=await response.json();\n if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;\n}\nfunction error(e){$('error').textContent=e.message;}\nasync function status(){\n try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'\u30AF\u30E9\u30A6\u30C9\u3067\u76E3\u8996\u4E2D':'\u76E3\u8996\u30FB\u7167\u5408\u306E\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044'));\n box.append(el('p',`\u6700\u7D42\u53D6\u5F97\uFF1A${time(s.lastSuccess)} \uFF0F \u53D6\u5F97\u9593\u9694\uFF1A${s.intervalSeconds}\u79D2 \uFF0F \u7167\u5408\u5F85\u3061\uFF1A${s.pending}\u4EF6`));\n for(const [g,v] of Object.entries(s.groups))box.append(el('div',`${g==='nankai'?'\u5357\u6D77\u7DDA':'\u9AD8\u91CE\u7DDA'}\uFF1A${v.error||`\u914D\u4FE1\u6642\u523B ${time(v.sourceTime)}\u30FB${v.trainCount}\u5217\u8ECA`}`));\n if(s.refresh?.error)box.append(el('p','\u904B\u7528\u8868\u306E\u66F4\u65B0\u306B\u5931\u6557\uFF1A'+s.refresh.error,'error'));\n if(s.feedError||s.baselineError)box.append(el('p',[s.feedError,s.baselineError].filter(Boolean).join(' / '),'error'));\n if(s.baseline)box.append(el('small',`\u7167\u5408\u30C7\u30FC\u30BF\u66F4\u65B0\uFF1A${time(s.baseline.fetchedAt)}\u3002\u753B\u9762\u3092\u9589\u3058\u3066\u3082\u3001Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3092\u7D99\u7D9A\u3057\u307E\u3059\u3002`));\n }catch(e){$('status').className='panel';$('status').textContent='\u76E3\u8996\u72B6\u6CC1\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002\u76E3\u8996\u4E2D\u304B\u3069\u3046\u304B\u78BA\u8A8D\u3067\u304D\u306A\u3044\u72B6\u614B\u3067\u3059\u3002';error(e);}\n}\nasync function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}\nfunction card(e){\n const known=e.special,a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} \u5217\u8ECA`),el('span',known?.label||'\u5B9A\u671F\u5916\u5019\u88DC','tag'+(known?' known':'')));a.append(top);\n if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','\u533A\u9593\uFF1A'+known.route));if(known.schedule)box.append(el('div','\u6642\u523B\uFF1A'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}\n const d=el('div',undefined,'details');const p=e.last_payload,last=e.last_position;\n for(const [k,v] of [['\u7DE8\u6210\uFF08\u6700\u5F8C\u306B\u691C\u8A3C\u3067\u304D\u305F\u5024\uFF09',e.formation.text],['\u904B\u884C\u65E5\u30FB\u7CFB\u7D71',`${e.service_date} \uFF0F ${e.group_name==='nankai'?'\u5357\u6D77\u7DDA\u7CFB\u7D71':'\u9AD8\u91CE\u7DDA\u7CFB\u7D71'}`],['\u521D\u56DE \u2192 \u6700\u7D42\u78BA\u8A8D',`${time(e.first_seen)} \u2192 ${time(e.last_seen)}`],['\u78BA\u8A8D\u3067\u304D\u305F\u904B\u8EE2\u7BC4\u56F2',e.observed_range?.text||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093'],['\u6700\u7D42\u78BA\u8A8D\u5730\u70B9',last?`${last.text} \uFF0F ${last.directionLabel}`:`${p.station_id??'\u4E0D\u660E'} \uFF0F ${p.direction??'\u65B9\u5411\u4E0D\u660E'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);\n const button=el('button','\u5728\u7DDA\u5C65\u6B74'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);\n button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const data=await allHistory(e.id);history.replaceChildren(el('p',`\u5728\u7DDA\u5C65\u6B74 ${data.length}\u4EF6`));for(const o of data){const row=el('details'),where=o.position?.text||'\u4F4D\u7F6E\u4E0D\u660E';row.append(el('summary',`${clock(o.source_time)}\u3000${where}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','\u7167\u5408\u3057\u305F\u904B\u7528\u8868'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};\n return a;\n}\nasync function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{\n if(reset){params=new URLSearchParams({date:$('date').value,group:$('group').value,q:$('query').value});next=null;}\n const query=new URLSearchParams(params);if(next)query.set('before',next);\n const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const e of data.items)$('events').append(card(e));\n if(reset&&!data.items.length)$('events').append(el('p','\u8A72\u5F53\u3059\u308B\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u76E3\u8996\u958B\u59CB\u524D\u306E\u5C65\u6B74\u306F\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002'));\n next=data.next;$('more').hidden=!next;await status();\n }catch(e){error(e);}finally{busy=false;}}\nasync function open(){ $('loginPanel').hidden=true;$('main').hidden=false;await load(); }\n$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};\n$('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);\n$('logout').onclick=()=>{token='';sessionStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;};\n$('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};\nsetInterval(()=>{if(token&&!document.hidden)void status();},30000);\nif(token)void open();\n" };
 var stdin_default = {
   scheduled: worker_default.scheduled,
   fetch(request, env, ctx) {

@@ -2,6 +2,7 @@
 const $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';
 let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false;
 const time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'未確認';
+const clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'時刻不明';
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 async function api(url,options={}){
  const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});
@@ -22,10 +23,10 @@ async function allHistory(id){let after=0,items=[];do{const d=await api(`/api/lo
 function card(e){
  const known=e.special,a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} 列車`),el('span',known?.label||'定期外候補','tag'+(known?' known':'')));a.append(top);
  if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
- const d=el('div',undefined,'details');const p=e.last_payload;
- for(const [k,v] of [['編成（最後に検証できた値）',e.formation.text],['運行日・系統',`${e.service_date} ／ ${e.group_name==='nankai'?'南海線系統':'高野線系統'}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(e.last_seen)}`],['最終位置（API駅ID）',`${p.station_id??'不明'} → ${p.next_station_id??'停車中'} ／ ${p.direction??'方向不明'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);
- const button=el('button','確認履歴・元データ'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
- button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const data=await allHistory(e.id);history.replaceChildren(el('p',`確認履歴 ${data.length}件。位置・編成の変化は各時点の元データで確認できます。`));for(const o of data){const row=el('details');row.append(el('summary',`${time(o.source_time)} ／ 受信 ${time(o.observed_at)}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','照合した運用表'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};
+ const d=el('div',undefined,'details');const p=e.last_payload,last=e.last_position;
+ for(const [k,v] of [['編成（最後に検証できた値）',e.formation.text],['運行日・系統',`${e.service_date} ／ ${e.group_name==='nankai'?'南海線系統':'高野線系統'}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(e.last_seen)}`],['確認できた運転範囲',e.observed_range?.text||'確認できません'],['最終確認地点',last?`${last.text} ／ ${last.directionLabel}`:`${p.station_id??'不明'} ／ ${p.direction??'方向不明'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);
+ const button=el('button','在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
+ button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const data=await allHistory(e.id);history.replaceChildren(el('p',`在線履歴 ${data.length}件`));for(const o of data){const row=el('details'),where=o.position?.text||'位置不明';row.append(el('summary',`${clock(o.source_time)}　${where}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','照合した運用表'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};
  return a;
 }
 async function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{
