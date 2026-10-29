@@ -1,109 +1,6 @@
 const TRACKER_BACKEND =
     "https://nankaitracker.onrender.com";
 
-const NANKAI_AUTH_STORAGE_KEY =
-    "nankaiTrackerAuthToken";
-
-function getNankaiAuthToken() {
-    return (
-        sessionStorage.getItem(
-            NANKAI_AUTH_STORAGE_KEY
-        ) || ""
-    );
-}
-
-function clearNankaiAuthToken() {
-    sessionStorage.removeItem(
-        NANKAI_AUTH_STORAGE_KEY
-    );
-}
-
-async function authenticateNankai(
-    password
-) {
-    const response = await fetch(
-        `${TRACKER_BACKEND}/api/auth/nankai`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
-            body: JSON.stringify({
-                password
-            })
-        }
-    );
-
-    let data = {};
-
-    try {
-        data = await response.json();
-    } catch (error) {
-        data = {};
-    }
-
-    if (!response.ok || !data.token) {
-        clearNankaiAuthToken();
-
-        throw new Error(
-            data.error ||
-            "認証に失敗しました"
-        );
-    }
-
-    sessionStorage.setItem(
-        NANKAI_AUTH_STORAGE_KEY,
-        data.token
-    );
-
-    return true;
-}
-
-async function verifyNankaiAuth() {
-    const token =
-        getNankaiAuthToken();
-
-    if (!token) {
-        return false;
-    }
-
-    try {
-        const response = await fetch(
-            `${TRACKER_BACKEND}/api/auth/nankai/verify`,
-            {
-                headers: {
-                    Authorization:
-                        `Bearer ${token}`
-                }
-            }
-        );
-
-        if (!response.ok) {
-            clearNankaiAuthToken();
-            return false;
-        }
-
-        const data =
-            await response.json();
-
-        if (!data.ok) {
-            clearNankaiAuthToken();
-            return false;
-        }
-
-        return true;
-
-    } catch (error) {
-        console.warn(
-            "南海線認証確認に失敗:",
-            error
-        );
-
-        return false;
-    }
-}
-
 async function getTrainData() {
     const response = await fetch(
         "https://external-data.nankaiapp.com/tid/trains.json"
@@ -159,20 +56,7 @@ async function getTrainDetail(
         `&interface_no=1` +
         `&base_time=${encodeURIComponent(baseTime)}`;
 
-    const headers = {};
-
-    if (numericLineId === 1) {
-        const token =
-            getNankaiAuthToken();
-
-        if (token) {
-            headers.Authorization =
-                `Bearer ${token}`;
-        }
-    }
-
-    const response =
-        await fetch(url, { headers });
+    const response = await fetch(url);
 
     let data = {};
 
@@ -182,16 +66,6 @@ async function getTrainDetail(
         data = {};
     }
 
-    if (
-        response.status === 401 &&
-        numericLineId === 1
-    ) {
-        clearNankaiAuthToken();
-
-        throw new Error(
-            "南海線の閲覧認証が必要です"
-        );
-    }
 
     if (!response.ok) {
         throw new Error(
@@ -211,11 +85,3 @@ async function getTrainDetail(
     return data;
 }
 
-window.authenticateNankai =
-    authenticateNankai;
-
-window.verifyNankaiAuth =
-    verifyNankaiAuth;
-
-window.clearNankaiAuthToken =
-    clearNankaiAuthToken;

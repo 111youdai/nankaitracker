@@ -262,74 +262,8 @@ function renderMode(mode) {
     );
 }
 
-const authModal =
-    document.getElementById(
-        "nankaiAuthModal"
-    );
-
-const authForm =
-    document.getElementById(
-        "nankaiAuthForm"
-    );
-
-const authPassword =
-    document.getElementById(
-        "nankaiPassword"
-    );
-
-const authError =
-    document.getElementById(
-        "nankaiAuthError"
-    );
-
-const authSubmit =
-    document.getElementById(
-        "nankaiAuthSubmit"
-    );
-
-const closeAuthModal =
-    document.getElementById(
-        "closeAuthModal"
-    );
-
-function showNankaiAuthModal() {
-    if (!authModal) {
-        return;
-    }
-
-    if (authError) {
-        authError.textContent = "";
-    }
-
-    if (authPassword) {
-        authPassword.value = "";
-    }
-
-    if (!authModal.open) {
-        authModal.showModal();
-    }
-
-    setTimeout(
-        () => authPassword?.focus(),
-        0
-    );
-}
-
 async function requestMode(mode) {
-    if (mode !== MODE_NANKAI) {
-        renderMode(MODE_KOYA);
-        return true;
-    }
-
-    const authenticated =
-        await window.verifyNankaiAuth();
-
-    if (!authenticated) {
-        showNankaiAuthModal();
-        return false;
-    }
-
-    renderMode(MODE_NANKAI);
+    renderMode(mode === MODE_NANKAI ? MODE_NANKAI : MODE_KOYA);
     return true;
 }
 
@@ -377,18 +311,7 @@ async function loadApp() {
                         : MODE_KOYA
                 );
 
-        /*
-         * 高野線は常に公開。
-         * 前回南海線を見ていた場合でも、
-         * まず高野線を描画してから認証確認する。
-         */
-        renderMode(MODE_KOYA);
-
-        if (initialMode === MODE_NANKAI) {
-            await requestMode(
-                MODE_NANKAI
-            );
-        }
+        renderMode(initialMode);
 
     } catch (error) {
         console.error(
@@ -421,74 +344,6 @@ for (
             requestMode(
                 button.dataset.lineMode
             );
-        }
-    );
-}
-
-if (authForm) {
-    authForm.addEventListener(
-        "submit",
-        async event => {
-            event.preventDefault();
-
-            const password =
-                authPassword?.value || "";
-
-            if (authError) {
-                authError.textContent = "";
-            }
-
-            if (authSubmit) {
-                authSubmit.disabled = true;
-                authSubmit.textContent =
-                    "確認中...";
-            }
-
-            try {
-                await window.authenticateNankai(
-                    password
-                );
-
-                authModal?.close();
-                renderMode(MODE_NANKAI);
-
-            } catch (error) {
-                if (authError) {
-                    authError.textContent =
-                        error.message ||
-                        "認証に失敗しました";
-                }
-
-                authPassword?.focus();
-                authPassword?.select();
-
-            } finally {
-                if (authSubmit) {
-                    authSubmit.disabled = false;
-                    authSubmit.textContent =
-                        "南海線を開く";
-                }
-            }
-        }
-    );
-}
-
-if (closeAuthModal) {
-    closeAuthModal.addEventListener(
-        "click",
-        () => {
-            authModal?.close();
-        }
-    );
-}
-
-if (authModal) {
-    authModal.addEventListener(
-        "click",
-        event => {
-            if (event.target === authModal) {
-                authModal.close();
-            }
         }
     );
 }
