@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';
-let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false;
+let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false,logsLoaded=false;
 const time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'未確認';
 const clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'時刻不明';
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
@@ -15,6 +15,7 @@ function showView(name){
  document.querySelectorAll('[data-log-view]').forEach(button=>button.classList.toggle('active',button.dataset.logView===(fleet?'fleet':'log')));
  history.replaceState(null,'',fleet?'#fleet':'#log');
  if(fleet&&!fleetLoaded)void loadFleet();
+ if(!fleet&&!logsLoaded)void load();
 }
 async function status(){
  try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'クラウドで監視中':'監視・照合の状態を確認してください'));
@@ -40,6 +41,7 @@ async function load(reset=true){if(busy)return;busy=true;$('error').textContent=
  const query=new URLSearchParams(params);if(next)query.set('before',next);
  const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const e of data.items)$('events').append(card(e));
  if(reset&&!data.items.length)$('events').append(el('p','該当する記録はありません。監視開始前の履歴は取得できません。'));
+ if(reset)logsLoaded=true;
  next=data.next;$('more').hidden=!next;await status();
  }catch(e){error(e);}finally{busy=false;}}
 const categoryOrder=['6両（固定）','4両（固定）','2両（固定）','特急車・その他'];
@@ -61,7 +63,6 @@ async function open(){
  $('loginPanel').hidden=true;$('main').hidden=false;
  const view=location.hash==='#fleet'?'fleet':'log';
  showView(view);
- if(view==='log')await load();
 }
 $('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
 $('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);
