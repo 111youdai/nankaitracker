@@ -1,0 +1,22 @@
+{
+  "id": "/nankaitracker/",
+  "name": "南海トラッカー",
+  "short_name": "南海トラッカー",
+  "description": "南海線・高野線・泉北線・支線の列車位置を確認できる非公式トラッカー",
+  "lang": "ja",
+  "start_url": "/nankaitracker/#home",
+  "scope": "/nankaitracker/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#06151d",
+  "theme_color": "#071b24",
+  "icons": [
+    {
+      "src": "assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

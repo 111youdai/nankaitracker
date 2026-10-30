@@ -21,7 +21,7 @@ function showUpdateTime(
     }
 
     const isNankai =
-        mode === "nankai";
+        mode === "nankai" || mode === "branches";
 
     const date =
         isNankai
@@ -153,11 +153,13 @@ function showRouteStations(routeConfig) {
 
     lineElement.innerHTML = "";
 
-    lineElement.appendChild(createRouteSection(
-        routeConfig.mode === "nankai" ? "南海本線" : "高野線",
-        routeConfig.mainStations,
-        "上り・下りを縦に表示"
-    ));
+    if (routeConfig.mainStations.length) {
+        lineElement.appendChild(createRouteSection(
+            routeConfig.mainLabel || routeConfig.label,
+            routeConfig.mainStations,
+            "上り・下りを縦に表示"
+        ));
+    }
 
     for (
         const branch of
@@ -167,7 +169,7 @@ function showRouteStations(routeConfig) {
             continue;
         }
 
-        const junction = routeConfig.mainStations.find(
+        const junction = branch.stations.find(
             station => Number(station.id) === Number(branch.junctionId)
         );
         lineElement.appendChild(createRouteSection(
@@ -266,7 +268,7 @@ function canRenderAtRawStation(
         Number(rawStationId);
 
     if (
-        mode === "koya" &&
+        (mode === "koya" || mode === "semboku") &&
         stationId >= 151 &&
         stationId <= 156 &&
         typeof window.canPlaceOnSemboku ===

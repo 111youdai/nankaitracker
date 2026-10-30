@@ -18,6 +18,14 @@ window.analyzeTrainFormation = analyzeTrainFormation;
 
 const MODE_NANKAI = "nankai";
 const MODE_KOYA = "koya";
+const MODE_SEMBOKU = "semboku";
+const MODE_BRANCHES = "branches";
+const LINE_MODES = new Set([
+    MODE_NANKAI,
+    MODE_KOYA,
+    MODE_SEMBOKU,
+    MODE_BRANCHES
+]);
 
 const appState = {
     trainData: null,
@@ -63,59 +71,56 @@ function createRouteConfig(mode) {
     if (mode === MODE_NANKAI) {
         const mainIds = range(1, 42);
 
-        const branches = [
-            {
-                label: "高師浜線",
-                junctionId: 14,
-                stationIds: [62, 63],
-                aliases: { 61: 14 }
-            },
-            {
-                label: "空港線",
-                junctionId: 28,
-                stationIds: [76, 77],
-                aliases: { 75: 28 }
-            },
-            {
-                label: "多奈川線",
-                junctionId: 37,
-                stationIds: [83, 82, 81],
-                aliases: { 84: 37 }
-            },
-            {
-                label: "加太線",
-                junctionId: 40,
-                stationIds: [88, 89, 90, 91, 92, 93, 94],
-                aliases: { 87: 40 }
-            }
-        ];
-
-        const visibleStationIds = [
-            ...mainIds,
-            61, 62, 63,
-            75, 76, 77,
-            81, 82, 83, 84,
-            87, 88, 89, 90, 91, 92, 93, 94
-        ];
-
-        const placementAliases = {
-            61: 14,
-            75: 28,
-            84: 37,
-            87: 40
-        };
-
         return {
             mode,
             lineId: 1,
-            label: "南海線（本線・空港線・支線）",
+            label: "南海線",
+            mainLabel: "南海本線",
             mainStations: getStations(mainIds),
-            branches: branches.map(branch => ({
+            branches: [],
+            visibleStationIds: mainIds,
+            placementAliases: {}
+        };
+    }
+
+    if (mode === MODE_SEMBOKU) {
+        const mainIds = [109, 152, 153, 154, 155, 156];
+        return {
+            mode,
+            lineId: 2,
+            label: "泉北線",
+            mainLabel: "泉北線",
+            mainStations: getStations(mainIds),
+            branches: [],
+            visibleStationIds: [151, 152, 153, 154, 155, 156],
+            placementAliases: { 151: 109 }
+        };
+    }
+
+    if (mode === MODE_BRANCHES) {
+        const branchDefinitions = [
+            { label: "高師浜線", junctionId: 14, stationIds: [62, 63] },
+            { label: "空港線", junctionId: 28, stationIds: [76, 77] },
+            { label: "多奈川線", junctionId: 37, stationIds: [83, 82, 81] },
+            { label: "加太線", junctionId: 40, stationIds: [88, 89, 90, 91, 92, 93, 94] }
+        ];
+        return {
+            mode,
+            lineId: 1,
+            label: "支線",
+            mainLabel: "",
+            mainStations: [],
+            branches: branchDefinitions.map(branch => ({
                 ...branch,
-                stations: getStations(branch.stationIds)
+                stations: getStations([branch.junctionId, ...branch.stationIds])
             })),
-            visibleStationIds,
-            placementAliases
+            visibleStationIds: [
+                61, 62, 63,
+                75, 76, 77,
+                81, 82, 83, 84,
+                87, 88, 89, 90, 91, 92, 93, 94
+            ],
+            placementAliases: { 61: 14, 75: 28, 84: 37, 87: 40 }
         };
     }
 
@@ -124,24 +129,12 @@ function createRouteConfig(mode) {
     return {
         mode: MODE_KOYA,
         lineId: 2,
-        label: "高野線・泉北線",
+        label: "高野線",
+        mainLabel: "高野線",
         mainStations: getStations(mainIds),
-        branches: [
-            {
-                label: "泉北線",
-                junctionId: 109,
-                stationIds: [152, 153, 154, 155, 156],
-                stations: getStations([152, 153, 154, 155, 156]),
-                aliases: { 151: 109 }
-            }
-        ],
-        visibleStationIds: [
-            ...mainIds,
-            151, 152, 153, 154, 155, 156
-        ],
-        placementAliases: {
-            151: 109
-        }
+        branches: [],
+        visibleStationIds: mainIds,
+        placementAliases: {}
     };
 }
 
@@ -194,10 +187,7 @@ function renderMode(mode) {
         return;
     }
 
-    const normalizedMode =
-        mode === MODE_NANKAI
-            ? MODE_NANKAI
-            : MODE_KOYA;
+    const normalizedMode = LINE_MODES.has(mode) ? mode : MODE_NANKAI;
 
     const routeConfig =
         createRouteConfig(normalizedMode);
@@ -259,7 +249,7 @@ function renderMode(mode) {
 }
 
 async function requestMode(mode) {
-    renderMode(mode === MODE_NANKAI ? MODE_NANKAI : MODE_KOYA);
+    renderMode(LINE_MODES.has(mode) ? mode : MODE_NANKAI);
     return true;
 }
 
@@ -313,13 +303,12 @@ async function loadApp() {
             );
 
         const initialMode =
-            hashMode === MODE_NANKAI ||
-            hashMode === MODE_KOYA
+            LINE_MODES.has(hashMode)
                 ? hashMode
                 : (
-                    savedMode === MODE_NANKAI
-                        ? MODE_NANKAI
-                        : MODE_KOYA
+                    LINE_MODES.has(savedMode)
+                        ? savedMode
+                        : MODE_NANKAI
                 );
 
         renderMode(initialMode);
@@ -384,6 +373,50 @@ function showSearchMessage(message, isError = false) {
     element.classList.toggle("error", isError);
 }
 
+function getModeForTrain(train) {
+    const stationIds = [train.station_id, train.next_station_id]
+        .filter(value => value != null)
+        .map(Number);
+    const branchIds = new Set([
+        61, 62, 63,
+        75, 76, 77,
+        81, 82, 83, 84,
+        87, 88, 89, 90, 91, 92, 93, 94
+    ]);
+
+    if (Number(train.line_id) === 1) {
+        return stationIds.some(id => branchIds.has(id))
+            ? MODE_BRANCHES
+            : MODE_NANKAI;
+    }
+
+    return stationIds.some(id => id >= 151 && id <= 156)
+        ? MODE_SEMBOKU
+        : MODE_KOYA;
+}
+
+function setAppView(view, updateHistory = true) {
+    const routeVisible = view === "route";
+    const home = document.getElementById("home");
+    const route = document.getElementById("routeWorkspace");
+
+    if (home) home.hidden = routeVisible;
+    if (route) route.hidden = !routeVisible;
+
+    document.querySelectorAll(".mobile-nav [data-app-view]").forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.appView === (routeVisible ? "route" : "home")
+        );
+    });
+
+    window.closeTrainDetail?.();
+    if (updateHistory) {
+        history.replaceState(null, "", routeVisible ? "#route" : "#home");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 const trainSearch = document.getElementById("trainSearch");
 trainSearch?.addEventListener("submit", event => {
     event.preventDefault();
@@ -395,7 +428,8 @@ trainSearch?.addEventListener("submit", event => {
         return;
     }
 
-    const mode = Number(train.line_id) === 1 ? MODE_NANKAI : MODE_KOYA;
+    const mode = getModeForTrain(train);
+    setAppView("route");
     renderMode(mode);
 
     const trainElement = [...document.querySelectorAll(".train")].find(
@@ -414,12 +448,10 @@ trainSearch?.addEventListener("submit", event => {
     window.setTimeout(() => window.openTrainDetail?.(train), 350);
 });
 
-document.querySelectorAll("[data-scroll-target]").forEach(button => {
-    button.addEventListener("click", () => {
-        document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
+document.querySelectorAll("[data-app-view]").forEach(control => {
+    control.addEventListener("click", event => {
+        event.preventDefault();
+        setAppView(control.dataset.appView);
     });
 });
 
@@ -482,4 +514,6 @@ if (versionModal) {
     );
 }
 
+const initialHash = location.hash.replace("#", "");
+setAppView(initialHash === "route" || LINE_MODES.has(initialHash) ? "route" : "home", false);
 loadApp();
