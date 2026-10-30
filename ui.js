@@ -216,34 +216,83 @@ function getResolvedKind(train) {
 }
 
 function getFormationInfo(train) {
+    let appInfo;
+
     if (
         typeof window.analyzeTrainFormation ===
         "function"
     ) {
-        return window
+        appInfo = window
             .analyzeTrainFormation(train);
+    } else {
+        const totalCars =
+            Number(train.train_length_id) ||
+            null;
+
+        appInfo = {
+            rawTotalCars: totalCars,
+            totalCars,
+            totalCarsReliable: Boolean(totalCars),
+            formationReliable: false,
+            formationText: "",
+            carNumbers: [],
+            carCounts: [],
+            carCountTotal: 0,
+            sembokuService: false,
+            limitedExpress: false,
+            problems: [
+                "編成情報の検証機能を読み込めませんでした"
+            ]
+        };
     }
 
-    const totalCars =
-        Number(train.train_length_id) ||
-        null;
+    if (
+        appInfo.formationReliable &&
+        appInfo.formationText
+    ) {
+        return {
+            ...appInfo,
+            formationSource: "app",
+            formationSourceLabel: "南海アプリ確認"
+        };
+    }
+
+    const trainKey = String(train.train_number ?? "")
+        .normalize("NFKC")
+        .trim()
+        .replace(/^回\s*/, "")
+        .replace(/^0+(?=\d)/, "")
+        .toUpperCase();
+    const groupKey =
+        Number(train.line_id) === 1
+            ? "nankai"
+            : "koya";
+    const hubInfo =
+        window.hubFormationMap?.get?.(`${groupKey}:${trainKey}`) ||
+        window.hubFormationMap?.[`${groupKey}:${trainKey}`];
+
+    if (hubInfo?.formation) {
+        return {
+            ...appInfo,
+            formationReliable: true,
+            formationText: String(hubInfo.formation),
+            formationSource: "hub",
+            formationSourceLabel: "運用Hub確認",
+            hubOperationNumber:
+                hubInfo.operationNumber || "",
+            appProblems: appInfo.problems || [],
+            problems: []
+        };
+    }
 
     return {
-        rawTotalCars: totalCars,
-        totalCars,
-        totalCarsReliable: Boolean(totalCars),
-        formationReliable: false,
-        formationText: "",
-        carNumbers: [],
-        carCounts: [],
-        carCountTotal: 0,
-        sembokuService: false,
-        limitedExpress: false,
-        problems: [
-            "編成情報の検証機能を読み込めませんでした"
-        ]
+        ...appInfo,
+        formationSource: "none",
+        formationSourceLabel: "編成未確認"
     };
 }
+
+window.resolveTrainFormation = getFormationInfo;
 
 function normalizePlacementStationId(
     stationId,
@@ -443,6 +492,17 @@ function showTrains(
                 ? `${formationInfo.totalCars}両`
                 : "両数不明";
 
+        const formationText =
+            formationInfo.formationReliable
+                ? String(formationInfo.formationText)
+                    .replace(/\s*\(\d+両\)/g, "")
+                : "編成未確認";
+
+        const formationSource =
+            formationInfo.formationSource === "hub"
+                ? `<div class="train-formation-source">Hub確認</div>`
+                : "";
+
         trainElement.innerHTML = `
             <div class="train-kind">
                 ${escapeHtml(kindInfo.trainType)}
@@ -455,6 +515,12 @@ function showTrains(
             <div class="train-cars">
                 ${escapeHtml(carsText)}
             </div>
+
+            <div class="train-formation${formationInfo.formationSource === "hub" ? " hub" : ""}">
+                ${escapeHtml(formationText)}
+            </div>
+
+            ${formationSource}
         `;
 
         if (
@@ -548,6 +614,11 @@ function getFormationDetailHtml(
     if (
         formationInfo.formationReliable
     ) {
+        const sourceNote =
+            formationInfo.formationSource === "hub"
+                ? `<p class="formation-source-note">南海アプリで編成を確認できなかったため、運用Hubの当日投稿から補完しています。</p>`
+                : "";
+
         return `
             <p><b>編成番号</b></p>
             <p>
@@ -555,6 +626,8 @@ function getFormationDetailHtml(
                     formationInfo.formationText
                 )}
             </p>
+
+            ${sourceNote}
 
             <p><b>両数</b></p>
             <p>${escapeHtml(totalCarsText)}</p>

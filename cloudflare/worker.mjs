@@ -1,4 +1,4 @@
-import {poll,refresh,refreshFleet,read,put} from './data.mjs';
+import {poll,refresh,refreshFleet,refreshLiveFormations,read,put} from './data.mjs';
 import {issue,authorized,samePassword} from './auth.mjs';
 import core from './core.cjs';
 import stations from './stations.cjs';
@@ -7,6 +7,7 @@ const {specialService}=core;
 const {trajectoryPositions}=stations;
 const {mergeFleetStatus}=fleet;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+const publicJson=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'public, max-age=60','Access-Control-Allow-Origin':'*','X-Content-Type-Options':'nosniff'}});
 function decodeEvent(e){
  const {second_payload,previous_payload,...event}=e,first=JSON.parse(e.first_payload||e.last_payload),second=second_payload?JSON.parse(second_payload):null,previous=previous_payload?JSON.parse(previous_payload):null,last=JSON.parse(e.last_payload);
  const firstPosition=trajectoryPositions(second?[first,second]:[first],{eventStart:true})[0],lastPositions=trajectoryPositions(previous?[previous,last]:[last],{eventEnd:true}),lastPosition=lastPositions.at(-1);
@@ -20,6 +21,11 @@ const eventSelect=`SELECT events.*,
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
  try{
+  if(p==='/api/live-formations'){
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Max-Age':'86400'}});
+   if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
+   return publicJson(await refreshLiveFormations(db,new Date()));
+  }
   if(p==='/api/auth/logs'&&request.method==='POST'){
    if(!env.LOG_ACCESS_PASSWORD)return json({error:'Cloudflareにログ用パスワードが未設定です'},503);
    const body=await request.text();if(body.length>1024)return json({error:'リクエストが大きすぎます'},413);

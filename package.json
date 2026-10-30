@@ -1,6 +1,6 @@
 {
   "name": "nankai-tracker",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "type": "commonjs",
   "main": "server.js",

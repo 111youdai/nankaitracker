@@ -50,14 +50,14 @@
                         <span class="quick-symbol">路</span>
                         <span><b>列車位置</b><small id="networkTrainCount">読み込み中</small></span>
                     </button>
-                    <a class="quick-card log-card" href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#log">
+                    <button class="quick-card log-card" type="button" data-app-view="log">
                         <span class="quick-symbol">特</span>
                         <span><b>定期外ログ</b><small>試運転・臨時回送など</small></span>
-                    </a>
-                    <a class="quick-card fleet-card" href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#fleet">
+                    </button>
+                    <button class="quick-card fleet-card" type="button" data-app-view="fleet">
                         <span class="quick-symbol">編</span>
                         <span><b>編成状況</b><small>入場・出場・留置</small></span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </section>
@@ -80,6 +80,14 @@
             <div class="route-legend" aria-label="凡例"><span><i class="up"></i>上り</span><span><i class="down"></i>下り</span><span>列車をタップすると詳細を表示</span></div>
             <div id="line" aria-live="polite"><div class="loading-card">列車位置を読み込んでいます…</div></div>
         </section>
+
+        <section id="recordsWorkspace" class="records-workspace" hidden>
+            <div class="records-heading">
+                <div><span class="eyebrow">OPERATION RECORDS</span><h2 id="recordsTitle">定期外ログ</h2></div>
+                <span class="records-secure">A320認証</span>
+            </div>
+            <iframe id="recordsFrame" class="records-frame" title="定期外列車ログ・編成状況" loading="lazy"></iframe>
+        </section>
     </main>
 
     <button id="detailBackdrop" class="detail-backdrop" type="button" aria-label="列車詳細を閉じる"></button>
@@ -91,13 +99,14 @@
     <nav class="mobile-nav" aria-label="主要メニュー">
         <button type="button" class="active" data-app-view="home"><i>⌂</i><span>ホーム</span></button>
         <button type="button" data-app-view="route"><i>│</i><span>在線</span></button>
-        <a href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#log"><i>!</i><span>ログ</span></a>
-        <a href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#fleet"><i>≡</i><span>編成</span></a>
+        <button type="button" data-app-view="log"><i>!</i><span>ログ</span></button>
+        <button type="button" data-app-view="fleet"><i>≡</i><span>編成</span></button>
     </nav>
 
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
+            <section><b>Ver 1.4.2</b><p>ログ・編成状況をトラッカー内へ統合し、在線カードへ編成番号を追加。</p></section>
             <section><b>Ver 1.4.1</b><p>ホームと在線を画面切替式に変更。南海・高野・泉北・支線を分離し、ホーム画面アプリ表示に対応。</p></section>
             <section><b>Ver 1.4.0</b><p>スマートフォン向けデザインへ刷新。カードホーム・縦型在線表示・運用ボード型ログを統合。</p></section>
             <section><b>Ver 1.3.1</b><p>Cloudflareで毎分監視し、定期外ログと編成状況をD1へ保存。</p></section>

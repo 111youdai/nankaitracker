@@ -1,6 +1,12 @@
 const TRACKER_BACKEND =
     "https://nankaitracker.onrender.com";
 
+const TRACKER_LOG_WORKER =
+    "https://nankai-tracker-logger.youdai-tracker.workers.dev";
+
+window.TRACKER_LOG_WORKER_URL =
+    TRACKER_LOG_WORKER;
+
 async function getTrainData() {
     const response = await fetch(
         "https://external-data.nankaiapp.com/tid/trains.json"
@@ -23,6 +29,20 @@ async function getLineData() {
     if (!response.ok) {
         throw new Error(
             `路線APIエラー: ${response.status}`
+        );
+    }
+
+    return await response.json();
+}
+
+async function getLiveFormationData() {
+    const response = await fetch(
+        `${TRACKER_LOG_WORKER}/api/live-formations`
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `運用Hub編成照合エラー: ${response.status}`
         );
     }
 

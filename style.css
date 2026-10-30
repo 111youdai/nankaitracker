@@ -229,6 +229,41 @@ a { color: inherit; text-decoration: none; }
 .route-legend i.up { background: var(--blue); }
 .route-legend i.down { background: var(--orange); }
 
+.records-workspace {
+    min-height: calc(100dvh - 104px);
+    margin: 22px 0 70px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    background: rgba(10, 31, 40, 0.82);
+    box-shadow: 0 28px 90px rgba(0,0,0,.25);
+}
+.records-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    margin: 0 4px 14px;
+}
+.records-heading h2 { margin: 4px 0 0; font-size: clamp(25px, 4vw, 36px); }
+.records-secure {
+    padding: 7px 10px;
+    border: 1px solid rgba(244, 196, 91, .3);
+    border-radius: 999px;
+    background: rgba(94, 69, 15, .28);
+    color: #f4d487;
+    font-size: 10px;
+    font-weight: 800;
+}
+.records-frame {
+    width: 100%;
+    height: calc(100dvh - 205px);
+    min-height: 620px;
+    border: 0;
+    border-radius: 18px;
+    background: #071923;
+}
+
 #line { display: grid; gap: 24px; }
 .loading-card, .detail-error { padding: 20px; color: var(--muted); text-align: center; }
 .route-section {
@@ -335,6 +370,19 @@ a { color: inherit; text-decoration: none; }
 .train-kind { overflow: hidden; color: #adc3c7; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .train-number { font-size: 17px; font-weight: 900; }
 .train-cars { color: #adc3c7; font-size: 9px; }
+.train-formation {
+    overflow: hidden;
+    margin-top: 3px;
+    color: #effafa;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.train-formation.hub { color: #b8f2e8; }
+.train-formation-source { margin-top: 2px; color: var(--teal); font-size: 7px; font-weight: 800; }
+.formation-source-note { color: #a8dad1; font-size: 11px; }
 
 .detail-backdrop {
     position: fixed;
@@ -466,6 +514,10 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .quick-card { min-height: 106px; padding: 14px; }
     .quick-card.route-card { grid-column: 1 / -1; min-height: 86px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 13px; }
     .route-workspace { min-height: calc(100dvh - 154px); margin: 12px 0 16px; padding: 14px 10px 22px; border-radius: 20px; }
+    .records-workspace { min-height: calc(100dvh - 150px); margin: 12px 0 8px; padding: 12px 8px 8px; border-radius: 20px; }
+    .records-heading { margin: 0 6px 10px; }
+    .records-heading h2 { font-size: 24px; }
+    .records-frame { height: calc(100dvh - 183px - env(safe-area-inset-bottom)); min-height: 520px; border-radius: 14px; }
     .workspace-heading { display: block; padding: 4px 5px; }
     .workspace-heading h2 { font-size: 26px; }
     .workspace-heading p { flex-wrap: wrap; }
@@ -480,7 +532,7 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .down-track { padding-left: 5px; }
     .station-name { max-width: 94px; font-size: 12px; }
     .station-number { font-size: 8px; }
-    .train { min-width: 68px; max-width: 94px; padding: 7px 5px; }
+    .train { min-width: 72px; max-width: 104px; padding: 7px 5px; }
     .train-number { font-size: 15px; }
     #detailPanel {
         top: auto;

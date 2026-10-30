@@ -30,6 +30,7 @@ const LINE_MODES = new Set([
 const appState = {
     trainData: null,
     lineData: null,
+    liveFormationData: null,
     stationLookup: new Map()
 };
 
@@ -258,14 +259,25 @@ window.switchNankaiTrackerLine =
 
 async function loadApp() {
     try {
-        const [trainData, lineData] =
+        const [trainData, lineData, liveFormationData] =
             await Promise.all([
                 getTrainData(),
-                getLineData()
+                getLineData(),
+                getLiveFormationData().catch(error => {
+                    console.warn(
+                        "運用Hubの編成照合を取得できませんでした",
+                        error
+                    );
+                    return { items: {} };
+                })
             ]);
 
         appState.trainData = trainData;
         appState.lineData = lineData;
+        appState.liveFormationData = liveFormationData;
+        window.hubFormationMap = new Map(
+            Object.entries(liveFormationData?.items || {})
+        );
         appState.stationLookup =
             buildStationLookup(lineData);
 
@@ -352,6 +364,7 @@ function findLiveTrain(query) {
     const candidates = (appState.trainData.trains || []).map(train => {
         const trainNumber = normalizeSearchValue(train.train_number);
         const formation = normalizeSearchValue(
+            window.resolveTrainFormation?.(train)?.formationText ||
             analyzeTrainFormation(train).formationText
         );
         let score = 0;
@@ -396,23 +409,47 @@ function getModeForTrain(train) {
 }
 
 function setAppView(view, updateHistory = true) {
-    const routeVisible = view === "route";
+    const normalizedView =
+        ["home", "route", "log", "fleet"].includes(view)
+            ? view
+            : "home";
     const home = document.getElementById("home");
     const route = document.getElementById("routeWorkspace");
+    const records = document.getElementById("recordsWorkspace");
+    const recordsVisible =
+        normalizedView === "log" ||
+        normalizedView === "fleet";
 
-    if (home) home.hidden = routeVisible;
-    if (route) route.hidden = !routeVisible;
+    if (home) home.hidden = normalizedView !== "home";
+    if (route) route.hidden = normalizedView !== "route";
+    if (records) records.hidden = !recordsVisible;
+
+    if (recordsVisible) {
+        const frame = document.getElementById("recordsFrame");
+        const title = document.getElementById("recordsTitle");
+        if (title) {
+            title.textContent =
+                normalizedView === "fleet"
+                    ? "編成状況"
+                    : "定期外ログ";
+        }
+        if (frame && frame.dataset.view !== normalizedView) {
+            frame.dataset.view = normalizedView;
+            frame.src =
+                `${window.TRACKER_LOG_WORKER_URL}/logs.html?embed=1#${normalizedView}`;
+        }
+    }
 
     document.querySelectorAll(".mobile-nav [data-app-view]").forEach(button => {
         button.classList.toggle(
             "active",
-            button.dataset.appView === (routeVisible ? "route" : "home")
+            button.dataset.appView === normalizedView
         );
     });
 
     window.closeTrainDetail?.();
     if (updateHistory) {
-        history.replaceState(null, "", routeVisible ? "#route" : "#home");
+        history.replaceState(null, "", `#${normalizedView}`);
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -515,5 +552,10 @@ if (versionModal) {
 }
 
 const initialHash = location.hash.replace("#", "");
-setAppView(initialHash === "route" || LINE_MODES.has(initialHash) ? "route" : "home", false);
+setAppView(
+    ["route", "log", "fleet"].includes(initialHash) || LINE_MODES.has(initialHash)
+        ? (LINE_MODES.has(initialHash) ? "route" : initialHash)
+        : "home",
+    false
+);
 loadApp();

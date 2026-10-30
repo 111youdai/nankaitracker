@@ -23,6 +23,66 @@ export async function refreshFleet(db,now,request=hub){
  const snapshot=buildHubFleet({nankai:nankaiOverviews,koya:koyaOverviews},{nankai:nankaiFormations,koya:koyaFormations},now.toISOString());
  await put(db,'fleet-status',snapshot).run();return snapshot;
 }
+function holidaySet(year){
+ const days=new Set(['01-01','02-11','02-23','04-29','05-03','05-04','05-05','08-11','11-03','11-23']);
+ const vernal=Math.floor(20.8431+0.242194*(year-1980))-Math.floor((year-1980)/4);
+ const autumnal=Math.floor(23.2488+0.242194*(year-1980))-Math.floor((year-1980)/4);
+ days.add(`03-${String(vernal).padStart(2,'0')}`);days.add(`09-${String(autumnal).padStart(2,'0')}`);
+ for(const [month,nth]of [[1,2],[7,3],[9,3],[10,2]]){
+  const first=new Date(Date.UTC(year,month-1,1,12));const offset=(8-first.getUTCDay())%7;
+  days.add(`${String(month).padStart(2,'0')}-${String(1+offset+7*(nth-1)).padStart(2,'0')}`);
+ }
+ const originals=[...days];
+ for(const day of originals){
+  const date=new Date(`${year}-${day}T12:00:00Z`);if(date.getUTCDay()!==0)continue;
+  do date.setUTCDate(date.getUTCDate()+1);while(days.has(date.toISOString().slice(5,10)));
+  if(date.getUTCFullYear()===year)days.add(date.toISOString().slice(5,10));
+ }
+ for(let month=1;month<=12;month++)for(let date=2;date<=30;date++){
+  const current=new Date(Date.UTC(year,month-1,date,12));if(current.getUTCMonth()!==month-1)continue;
+  const currentKey=current.toISOString().slice(5,10),previous=new Date(current),next=new Date(current);
+  previous.setUTCDate(date-1);next.setUTCDate(date+1);
+  if(!days.has(currentKey)&&days.has(previous.toISOString().slice(5,10))&&days.has(next.toISOString().slice(5,10)))days.add(currentKey);
+ }
+ return days;
+}
+export function diagramForDay(day){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw Error('運行日が不正です');
+ const date=new Date(`${day}T12:00:00Z`),dow=date.getUTCDay();
+ return dow===0||dow===6||holidaySet(date.getUTCFullYear()).has(day.slice(5))?'holiday':'weekday';
+}
+export function liveFormationMap(table,operations,group){
+ if(!table?.operations||typeof table.operations!=='object'||!operations||typeof operations!=='object'||Array.isArray(operations))throw Error(`${group}: 運用Hubの当日運用データが不正です`);
+ const items={};
+ for(const [operationNumber,post]of Object.entries(operations)){
+  const formation=String(post?.formations||'').normalize('NFKC').trim();
+  if(!formation||Number(post?.posts_count||0)<1)continue;
+  const trains=table.operations[operationNumber]?.trains;if(!Array.isArray(trains))continue;
+  for(const train of trains){
+   const raw=String(train?.train_number||'');if(!train?.line_id||/^[_.]/.test(raw))continue;
+   const trainNumber=numberKey(raw);if(!trainNumber)continue;
+   items[trainNumber]={formation,source:'unyohub',group,operationNumber,postsCount:Number(post.posts_count)};
+  }
+ }
+ return items;
+}
+export async function refreshLiveFormations(db,now,request=hub){
+ const day=core.serviceDate(now),cacheKey=`live-formations:${day}`,cached=await read(db,cacheKey);
+ if(cached&&Number.isFinite(Date.parse(cached.fetchedAt))&&now-Date.parse(cached.fetchedAt)<120000)return cached;
+ const diagram=diagramForDay(day),groups=await Promise.all(['nankai','koya'].map(async group=>{
+  const revisions=await request('diagram_revisions',{railroad_id:group});
+  if(!Array.isArray(revisions))throw Error(`${group}: ダイヤ改正一覧が不正です`);
+  const revision=revisions.filter(value=>value<=day).sort().at(-1);if(!revision)throw Error(`${group}: 対象ダイヤがありません`);
+  const [table,operations]=await Promise.all([
+   request('operation_table',{railroad_id:group,diagram_revision:revision,diagram_id:diagram}),
+   request('operation_data',{railroad_id:group,date:day})
+  ]);
+  return {group,items:liveFormationMap(table,operations,group)};
+ }));
+ const items={};for(const result of groups)for(const [trainNumber,item]of Object.entries(result.items))items[`${result.group}:${trainNumber}`]=item;
+ const snapshot={serviceDate:day,diagram,fetchedAt:now.toISOString(),items};
+ await put(db,cacheKey,snapshot).run();return snapshot;
+}
 export async function refresh(db,now,request=hub){
  const group=['nankai','nankai','koya','koya'][Math.floor(now.getTime()/900000)%4];
  const diagram=['weekday','holiday','weekday','holiday'][Math.floor(now.getTime()/900000)%4];
