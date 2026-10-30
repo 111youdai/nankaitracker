@@ -249,17 +249,13 @@ function renderMode(mode) {
         );
 
     detailPanel?.classList.remove("open");
+    document.body.classList.remove("detail-open");
 
     localStorage.setItem(
         "nankaiTrackerLineMode",
         normalizedMode
     );
 
-    history.replaceState(
-        null,
-        "",
-        `#${normalizedMode}`
-    );
 }
 
 async function requestMode(mode) {
@@ -282,6 +278,21 @@ async function loadApp() {
         appState.lineData = lineData;
         appState.stationLookup =
             buildStationLookup(lineData);
+
+        const trainCount = (trainData.trains || []).filter(
+            train => [1, 2].includes(Number(train.line_id))
+        ).length;
+        const networkTrainCount =
+            document.getElementById("networkTrainCount");
+        if (networkTrainCount) {
+            networkTrainCount.textContent = `${trainCount}列車を取得`;
+        }
+
+        const cloudState = document.querySelector(".cloud-state");
+        if (cloudState) {
+            cloudState.classList.add("ready");
+            cloudState.innerHTML = "<i></i>位置情報を取得済み";
+        }
 
         window.koyaBaseTime =
             trainData.koya_update_time ||
@@ -329,8 +340,97 @@ async function loadApp() {
                 </p>
             `;
         }
+
+        const cloudState = document.querySelector(".cloud-state");
+        if (cloudState) {
+            cloudState.classList.add("error");
+            cloudState.innerHTML = "<i></i>取得できません";
+        }
     }
 }
+
+function normalizeSearchValue(value) {
+    return String(value || "")
+        .toUpperCase()
+        .replace(/\s+/g, "")
+        .replace(/Ｆ/g, "F");
+}
+
+function findLiveTrain(query) {
+    const normalized = normalizeSearchValue(query);
+    if (!normalized || !appState.trainData) return null;
+
+    const candidates = (appState.trainData.trains || []).map(train => {
+        const trainNumber = normalizeSearchValue(train.train_number);
+        const formation = normalizeSearchValue(
+            analyzeTrainFormation(train).formationText
+        );
+        let score = 0;
+        if (trainNumber === normalized) score = 4;
+        else if (formation === normalized || formation === `${normalized}F`) score = 3;
+        else if (trainNumber.includes(normalized)) score = 2;
+        else if (formation.includes(normalized)) score = 1;
+        return { train, score };
+    });
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0]?.score ? candidates[0].train : null;
+}
+
+function showSearchMessage(message, isError = false) {
+    const element = document.getElementById("searchMessage");
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle("error", isError);
+}
+
+const trainSearch = document.getElementById("trainSearch");
+trainSearch?.addEventListener("submit", event => {
+    event.preventDefault();
+    const query = document.getElementById("trainSearchInput")?.value;
+    const train = findLiveTrain(query);
+
+    if (!train) {
+        showSearchMessage("現在配信中の列車から見つかりませんでした。", true);
+        return;
+    }
+
+    const mode = Number(train.line_id) === 1 ? MODE_NANKAI : MODE_KOYA;
+    renderMode(mode);
+
+    const trainElement = [...document.querySelectorAll(".train")].find(
+        element => element.dataset.trainNumber === String(train.train_number)
+    );
+
+    if (!trainElement) {
+        showSearchMessage("列車は見つかりましたが、現在位置を路線上に表示できません。", true);
+        return;
+    }
+
+    showSearchMessage(`${train.train_number}列車を表示しました。`);
+    trainElement.classList.add("search-hit");
+    trainElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => trainElement.classList.remove("search-hit"), 2600);
+    window.setTimeout(() => window.openTrainDetail?.(train), 350);
+});
+
+document.querySelectorAll("[data-scroll-target]").forEach(button => {
+    button.addEventListener("click", () => {
+        document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    });
+});
+
+document.getElementById("detailBackdrop")?.addEventListener(
+    "click",
+    () => window.closeTrainDetail?.()
+);
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") window.closeTrainDetail?.();
+});
 
 for (
     const button of

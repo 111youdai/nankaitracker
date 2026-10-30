@@ -119,94 +119,25 @@ function createStationElement(
     return stationElement;
 }
 
-function calculateBranchExtraRows(
-    mainStations,
-    branches
-) {
-    let maxExtraRows = 0;
+function createRouteSection(label, stations, subtitle = "") {
+    const section = document.createElement("section");
+    section.className = "route-section";
 
-    for (const branch of branches) {
-        const junctionIndex =
-            mainStations.findIndex(
-                station =>
-                    Number(station.id) ===
-                    Number(branch.junctionId)
-            );
+    const header = document.createElement("header");
+    header.className = "route-section-header";
 
-        if (junctionIndex < 0) {
-            continue;
-        }
+    const heading = document.createElement("h3");
+    heading.textContent = label;
+    const note = document.createElement("span");
+    note.textContent = subtitle || `${stations.length}駅`;
+    header.append(heading, note);
+    section.append(header);
 
-        const mainRowsBelow =
-            mainStations.length -
-            junctionIndex -
-            1;
-
-        const extraRows =
-            Math.max(
-                0,
-                branch.stations.length -
-                mainRowsBelow
-            );
-
-        maxExtraRows =
-            Math.max(
-                maxExtraRows,
-                extraRows
-            );
+    for (const station of stations) {
+        section.appendChild(createStationElement(station));
     }
 
-    return maxExtraRows;
-}
-
-function attachBranch(
-    branch,
-    junctionRow
-) {
-    junctionRow.style.position =
-        "relative";
-
-    const connector =
-        document.createElement("div");
-
-    connector.className =
-        "branch-connector";
-
-    const branchColumn =
-        document.createElement("div");
-
-    branchColumn.className =
-        "branch-column";
-
-    const branchLabel =
-        document.createElement("div");
-
-    branchLabel.className =
-        "branch-label";
-
-    branchLabel.textContent =
-        branch.label || "支線";
-
-    branchColumn.appendChild(
-        branchLabel
-    );
-
-    for (const station of branch.stations) {
-        branchColumn.appendChild(
-            createStationElement(
-                station,
-                "branch-station"
-            )
-        );
-    }
-
-    junctionRow.appendChild(
-        connector
-    );
-
-    junctionRow.appendChild(
-        branchColumn
-    );
+    return section;
 }
 
 function showRouteStations(routeConfig) {
@@ -222,34 +153,11 @@ function showRouteStations(routeConfig) {
 
     lineElement.innerHTML = "";
 
-    const routeContainer =
-        document.createElement("div");
-
-    routeContainer.className =
-        "route-container";
-
-    const mainColumn =
-        document.createElement("div");
-
-    mainColumn.className =
-        "main-line-column";
-
-    for (
-        const station of
-        routeConfig.mainStations
-    ) {
-        mainColumn.appendChild(
-            createStationElement(station)
-        );
-    }
-
-    routeContainer.appendChild(
-        mainColumn
-    );
-
-    lineElement.appendChild(
-        routeContainer
-    );
+    lineElement.appendChild(createRouteSection(
+        routeConfig.mode === "nankai" ? "南海本線" : "高野線",
+        routeConfig.mainStations,
+        "上り・下りを縦に表示"
+    ));
 
     for (
         const branch of
@@ -259,35 +167,14 @@ function showRouteStations(routeConfig) {
             continue;
         }
 
-        const junctionRow =
-            document.getElementById(
-                `station-${branch.junctionId}`
-            );
-
-        if (!junctionRow) {
-            console.warn(
-                "分岐駅が見つかりません",
-                branch.label,
-                branch.junctionId
-            );
-            continue;
-        }
-
-        attachBranch(
-            branch,
-            junctionRow
+        const junction = routeConfig.mainStations.find(
+            station => Number(station.id) === Number(branch.junctionId)
         );
-    }
-
-    const extraRows =
-        calculateBranchExtraRows(
-            routeConfig.mainStations,
-            routeConfig.branches
-        );
-
-    if (extraRows > 0) {
-        routeContainer.style.paddingBottom =
-            `${extraRows * 78}px`;
+        lineElement.appendChild(createRouteSection(
+            branch.label || "支線",
+            branch.stations,
+            junction?.name_ja ? `${junction.name_ja}から分岐` : "支線"
+        ));
     }
 }
 
@@ -427,6 +314,8 @@ function showTrains(
     const aliases =
         options.placementAliases || {};
 
+    let renderedCount = 0;
+
     for (const train of trainData.trains || []) {
         if (
             Number(train.line_id) !==
@@ -530,6 +419,23 @@ function showTrains(
         const formationInfo =
             getFormationInfo(train);
 
+        trainElement.dataset.trainNumber =
+            String(train.train_number || "");
+        trainElement.dataset.formation =
+            String(formationInfo.formationText || "");
+        trainElement.tabIndex = 0;
+        trainElement.setAttribute("role", "button");
+        trainElement.setAttribute(
+            "aria-label",
+            `${train.train_number}列車の詳細を開く`
+        );
+        trainElement.onkeydown = event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openDetail(train);
+            }
+        };
+
         const carsText =
             formationInfo.totalCars
                 ? `${formationInfo.totalCars}両`
@@ -565,6 +471,12 @@ function showTrains(
         target.appendChild(
             trainElement
         );
+        renderedCount += 1;
+    }
+
+    const countElement = document.getElementById("visibleTrainCount");
+    if (countElement) {
+        countElement.textContent = `${renderedCount}列車を表示中`;
     }
 }
 
@@ -846,13 +758,12 @@ async function openDetail(train) {
             "closeButton"
         );
 
-    if (closeButton) {
-        closeButton.onclick = () => {
-            panel.classList.remove(
-                "open"
-            );
-        };
-    }
+    const closeDetail = () => {
+        panel.classList.remove("open");
+        document.body.classList.remove("detail-open");
+    };
+
+    if (closeButton) closeButton.onclick = closeDetail;
 
     const kindInfo =
         getResolvedKind(train);
@@ -861,6 +772,7 @@ async function openDetail(train) {
         getFormationInfo(train);
 
     panel.classList.add("open");
+    document.body.classList.add("detail-open");
 
     content.innerHTML = `
         <h2>
@@ -914,3 +826,9 @@ async function openDetail(train) {
         });
     }
 }
+
+window.openTrainDetail = openDetail;
+window.closeTrainDetail = () => {
+    document.getElementById("detailPanel")?.classList.remove("open");
+    document.body.classList.remove("detail-open");
+};

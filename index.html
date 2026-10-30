@@ -1,115 +1,103 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>南海列車位置</title>
-
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#071b24">
+    <meta name="description" content="南海線・高野線・泉北線・支線の列車位置と定期外列車ログを確認できる非公式トラッカー">
+    <title>南海トラッカー</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-    <header>
-        <div class="header-top-row">
-            <h1>🚃 南海列車位置</h1>
-            <a href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html" target="_blank" rel="noopener" style="color:inherit">定期外ログ ↗</a>
-
-            <button id="versionBtn" type="button">
-                📜 更新履歴
-            </button>
+    <header class="app-header">
+        <a class="brand" href="#home" aria-label="南海トラッカー ホーム">
+            <span class="brand-mark">N</span>
+            <span><small>NANKAI TRACKER</small><strong>南海トラッカー</strong></span>
+        </a>
+        <div class="header-actions">
+            <span class="cloud-state"><i></i>位置情報を取得中</span>
+            <button id="versionBtn" class="icon-button" type="button" aria-label="更新履歴">i</button>
         </div>
-
-        <div class="line-switcher" role="tablist" aria-label="表示路線切替">
-            <button
-                id="nankaiLineBtn"
-                class="line-switch-btn"
-                type="button"
-                data-line-mode="nankai"
-                role="tab"
-            >
-                南海線
-            </button>
-
-            <button
-                id="koyaLineBtn"
-                class="line-switch-btn"
-                type="button"
-                data-line-mode="koya"
-                role="tab"
-            >
-                高野線
-            </button>
-        </div>
-
-        <p id="currentLineLabel">高野線・泉北線</p>
-        <p id="updateTime">更新中...</p>
     </header>
 
-    <main>
-        <div id="line"></div>
+    <main class="app-main">
+        <section id="home" class="home-dashboard">
+            <div class="home-copy">
+                <span class="eyebrow">REALTIME TRAIN LOCATION</span>
+                <h1>いま、どこを<br>走ってる？</h1>
+                <p>南海線・高野線・泉北線・支線の在線位置と、通常ダイヤにない列車の記録をまとめて確認できます。</p>
+            </div>
+
+            <div class="home-tools">
+                <form id="trainSearch" class="hero-search" role="search">
+                    <label for="trainSearchInput">列番・編成を検索</label>
+                    <div>
+                        <input id="trainSearchInput" autocomplete="off" inputmode="text" placeholder="例：9474 / 2039F">
+                        <button type="submit">検索</button>
+                    </div>
+                    <p id="searchMessage" role="status" aria-live="polite"></p>
+                </form>
+
+                <div class="quick-grid">
+                    <button class="quick-card route-card" type="button" data-scroll-target="routeWorkspace">
+                        <span class="quick-symbol">路</span>
+                        <span><b>列車位置</b><small id="networkTrainCount">読み込み中</small></span>
+                    </button>
+                    <a class="quick-card log-card" href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#log">
+                        <span class="quick-symbol">特</span>
+                        <span><b>定期外ログ</b><small>試運転・臨時回送など</small></span>
+                    </a>
+                    <a class="quick-card fleet-card" href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#fleet">
+                        <span class="quick-symbol">編</span>
+                        <span><b>編成状況</b><small>入場・出場・留置</small></span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="routeWorkspace" class="route-workspace">
+            <div class="workspace-heading">
+                <div>
+                    <span class="eyebrow">LIVE ROUTE</span>
+                    <h2 id="currentLineLabel">高野線・泉北線</h2>
+                    <p><span class="live-dot"></span><span id="visibleTrainCount">列車を読み込み中</span><span class="separator">·</span><span id="updateTime">更新中…</span></p>
+                </div>
+                <div class="line-switcher" role="tablist" aria-label="表示路線切替">
+                    <button id="nankaiLineBtn" class="line-switch-btn" type="button" data-line-mode="nankai" role="tab">南海線・支線</button>
+                    <button id="koyaLineBtn" class="line-switch-btn" type="button" data-line-mode="koya" role="tab">高野線・泉北線</button>
+                </div>
+            </div>
+
+            <div class="route-legend" aria-label="凡例"><span><i class="up"></i>上り</span><span><i class="down"></i>下り</span><span>列車をタップすると詳細を表示</span></div>
+            <div id="line" aria-live="polite"><div class="loading-card">列車位置を読み込んでいます…</div></div>
+        </section>
     </main>
 
-    <div id="detailPanel">
-        <button id="closeButton" type="button">×</button>
+    <button id="detailBackdrop" class="detail-backdrop" type="button" aria-label="列車詳細を閉じる"></button>
+    <aside id="detailPanel" aria-label="列車詳細">
+        <div class="detail-panel-head"><span>TRAIN DETAIL</span><button id="closeButton" type="button" aria-label="閉じる">×</button></div>
         <div id="detailContent"></div>
-    </div>
+    </aside>
 
-    
+    <nav class="mobile-nav" aria-label="主要メニュー">
+        <a href="#home" class="active"><i>⌂</i><span>ホーム</span></a>
+        <a href="#routeWorkspace"><i>│</i><span>在線</span></a>
+        <a href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#log"><i>!</i><span>ログ</span></a>
+        <a href="https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html#fleet"><i>≡</i><span>編成</span></a>
+    </nav>
 
     <dialog id="versionModal">
-        <div class="version-header">
-            <h2>📜 更新履歴</h2>
-
-            <button id="closeModal" type="button">
-                ×
-            </button>
+        <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
+        <div class="version-list">
+            <section><b>Ver 1.4.0</b><p>スマートフォン向けデザインへ刷新。カードホーム・縦型在線表示・運用ボード型ログを統合。</p></section>
+            <section><b>Ver 1.3.1</b><p>Cloudflareで毎分監視し、定期外ログと編成状況をD1へ保存。</p></section>
+            <section><b>Ver 1.3.0</b><p>南海線の閲覧認証を廃止し、ログ閲覧のみパスワード認証へ変更。</p></section>
+            <section><b>Ver 1.2.0</b><p>南海線・高野線・泉北線・各支線と列車詳細APIに対応。</p></section>
         </div>
-
-        <p>
-            <b>Ver 1.3.1</b><br>
-            ・Cloudflareで毎分監視・D1にログ保存<br><br>
-            <b>Ver 1.3.0</b><br>
-            ・南海線の閲覧認証を廃止<br>
-            ・サーバー常時監視と定期外ログ（ログのみ認証）を追加<br><br>
-            <b>Ver 1.2.1</b><br>
-            ・南海線に共通パスワード認証を追加<br>
-            ・認証済みのタブでは再入力を省略
-        </p>
-
-        <p>
-            <b>Ver 1.2.0</b><br>
-            ・南海線／高野線の切替に対応<br>
-            ・南海本線、空港線、高師浜線、多奈川線、加太線を表示<br>
-            ・南海線の列車詳細APIに対応
-        </p>
-
-        <p>
-            <b>Ver 1.1.0</b><br>
-            ・泉北線対応
-        </p>
-
-        <p>
-            <b>Ver 1.0.2</b><br>
-            ・Render API対応<br>
-            ・スマホ対応
-        </p>
-
-        <p>
-            <b>Ver 1.0.1</b><br>
-            ・列車詳細画面追加
-        </p>
-
-        <p>
-            <b>Ver 1.0.0</b><br>
-            ・南海トラッカー公開
-        </p>
     </dialog>
 
     <script src="api.js"></script>
     <script src="ui.js"></script>
     <script type="module" src="script.js"></script>
-
 </body>
 </html>

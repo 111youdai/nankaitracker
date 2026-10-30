@@ -4,7 +4,7 @@ const cors = require("cors");
 function createApp({ detailRequest = fetch } = {}) {
  const app = express();
  app.disable("x-powered-by"); app.use(cors());
- app.get("/", (req,res) => res.json({ok:true,service:"nankaitracker",version:"1.3.1"}));
+ app.get("/", (req,res) => res.json({ok:true,service:"nankaitracker",version:"1.4.0"}));
  app.get("/logs.html", (req,res) => {
   const target = process.env.LOG_WORKER_URL || "https://nankai-tracker-logger.youdai-tracker.workers.dev";
   if (!target) return res.status(503).type("text").send("Cloudflareのログ画面は準備中です。LOG_WORKER_URLを設定してください。");
