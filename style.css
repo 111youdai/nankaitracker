@@ -194,6 +194,11 @@ a { color: inherit; text-decoration: none; }
 .workspace-heading h2 { margin: 5px 0; font-size: clamp(27px, 4vw, 40px); letter-spacing: -.04em; }
 .workspace-heading p { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--muted); font-size: 12px; }
 .separator { opacity: .45; }
+.route-controls {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
 .line-switcher {
     display: grid;
     grid-template-columns: repeat(4, minmax(64px, 1fr));
@@ -203,6 +208,26 @@ a { color: inherit; text-decoration: none; }
     border-radius: 16px;
     background: #071a22;
 }
+.refresh-trains-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 15px;
+    border: 1px solid rgba(36, 201, 175, .34);
+    border-radius: 15px;
+    background: rgba(18, 83, 76, .72);
+    color: var(--text);
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.refresh-trains-btn:active { transform: scale(.98); }
+.refresh-trains-btn:disabled { opacity: .72; cursor: wait; }
+.refresh-symbol { font-size: 20px; line-height: 1; }
+.refresh-trains-btn.loading .refresh-symbol { animation: refresh-spin .85s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
 .line-switch-btn {
     padding: 10px 16px;
     border: 0;
@@ -521,7 +546,9 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .workspace-heading { display: block; padding: 4px 5px; }
     .workspace-heading h2 { font-size: 26px; }
     .workspace-heading p { flex-wrap: wrap; }
-    .line-switcher { width: 100%; margin-top: 15px; grid-template-columns: repeat(4, 1fr); }
+    .route-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; margin-top: 15px; }
+    .line-switcher { width: 100%; grid-template-columns: repeat(4, 1fr); }
+    .refresh-trains-btn { min-width: 90px; min-height: 48px; padding: 0 10px; border-radius: 15px; font-size: 11px; }
     .line-switch-btn { flex: 1; padding: 10px 8px; font-size: 12px; }
     .route-legend { gap: 10px; overflow-x: auto; white-space: nowrap; }
     #line { gap: 14px; }
