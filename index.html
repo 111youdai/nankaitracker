@@ -69,11 +69,17 @@
                     <h2 id="currentLineLabel">南海線</h2>
                     <p><span class="live-dot"></span><span id="visibleTrainCount">列車を読み込み中</span><span class="separator">·</span><span id="updateTime">更新中…</span></p>
                 </div>
-                <div class="line-switcher" role="tablist" aria-label="表示路線切替">
-                    <button id="nankaiLineBtn" class="line-switch-btn" type="button" data-line-mode="nankai" role="tab">南海</button>
-                    <button id="koyaLineBtn" class="line-switch-btn" type="button" data-line-mode="koya" role="tab">高野</button>
-                    <button id="sembokuLineBtn" class="line-switch-btn" type="button" data-line-mode="semboku" role="tab">泉北</button>
-                    <button id="branchLineBtn" class="line-switch-btn" type="button" data-line-mode="branches" role="tab">支線</button>
+                <div class="route-controls">
+                    <div class="line-switcher" role="tablist" aria-label="表示路線切替">
+                        <button id="nankaiLineBtn" class="line-switch-btn" type="button" data-line-mode="nankai" role="tab">南海</button>
+                        <button id="koyaLineBtn" class="line-switch-btn" type="button" data-line-mode="koya" role="tab">高野</button>
+                        <button id="sembokuLineBtn" class="line-switch-btn" type="button" data-line-mode="semboku" role="tab">泉北</button>
+                        <button id="branchLineBtn" class="line-switch-btn" type="button" data-line-mode="branches" role="tab">支線</button>
+                    </div>
+                    <button id="refreshTrains" class="refresh-trains-btn" type="button" aria-label="列車位置を更新">
+                        <span class="refresh-symbol" aria-hidden="true">↻</span>
+                        <span class="refresh-label">位置を更新</span>
+                    </button>
                 </div>
             </div>
 
