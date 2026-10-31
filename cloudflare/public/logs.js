@@ -10,6 +10,13 @@ async function api(url,options={}){
  if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;
 }
 function error(e){$('error').textContent=e.message;}
+function timelineTime(point){const start=point.timeLabel||clock(point.time),end=point.endTimeLabel||(point.endTime?clock(point.endTime):'');return end&&end!==start?`${start}〜${end}`:start;}
+function timelineView(timeline){
+ const box=el('section',undefined,'timeline');box.append(el('h3','推定通過時刻'));
+ if(!timeline?.available){box.append(el('p','この記録は、距離計算に必要な位置がまだ足りません。','muted'));return box;}
+ const summary=el('div',undefined,'timeline-summary');summary.append(el('span',`記録区間 ${timeline.distanceKm} km`),el('span',`平均 ${timeline.averageSpeedKmh} km/h`));box.append(summary);
+ const list=el('ol',undefined,'timeline-list');for(const point of timeline.points){const row=el('li'),when=el('time',timelineTime(point)),station=el('span',point.station+'駅'),kind=el('small',point.kind==='observed'?'実測':point.kind==='known'?'既知時刻':'推定','timeline-kind '+point.kind);row.append(when,station,kind);if(point.note)row.title=point.note;list.append(row);}box.append(list,el('p',timeline.note,'timeline-note'));return box;
+}
 function showView(name){
  const fleet=name==='fleet';$('logView').hidden=fleet;$('fleetView').hidden=!fleet;
  document.querySelectorAll('[data-log-view]').forEach(button=>button.classList.toggle('active',button.dataset.logView===(fleet?'fleet':'log')));
@@ -32,8 +39,8 @@ function card(e){
  if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
  const d=el('div',undefined,'details');const p=e.last_payload,last=e.last_position;
  for(const [k,v] of [['編成（最後に検証できた値）',e.formation.text],['運行日・系統',`${e.service_date} ／ ${e.group_name==='nankai'?'南海線系統':'高野線系統'}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(e.last_seen)}`],['確認できた運転範囲',e.observed_range?.text||'確認できません'],['最終確認地点',last?`${last.text} ／ ${last.directionLabel}`:`${p.station_id??'不明'} ／ ${p.direction??'方向不明'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);
- const button=el('button','在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
- button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const data=await allHistory(e.id);history.replaceChildren(el('p',`在線履歴 ${data.length}件`));for(const o of data){const row=el('details'),where=o.position?.text||'位置不明';row.append(el('summary',`${clock(o.source_time)}　${where}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','照合した運用表'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};
+ const button=el('button','推定時刻・在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
+ button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const [data,result]=await Promise.all([allHistory(e.id),api(`/api/logs/${e.id}/timeline`)]);history.replaceChildren(timelineView(result.timeline),el('p',`在線履歴 ${data.length}件`));for(const o of data){const row=el('details'),where=o.position?.text||'位置不明';row.append(el('summary',`${clock(o.source_time)}　${where}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','照合した運用表'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};
  return a;
 }
 async function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{

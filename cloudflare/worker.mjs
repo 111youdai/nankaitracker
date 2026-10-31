@@ -4,7 +4,7 @@ import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
 const {specialService}=core;
-const {trajectoryPositions}=stations;
+const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const publicJson=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'public, max-age=60','Access-Control-Allow-Origin':'*','X-Content-Type-Options':'nosniff'}});
@@ -67,6 +67,12 @@ export async function handle(request,env){
    if(m){const id=Number(m[1]),after=Number(u.searchParams.get('after')||0);if(!Number.isSafeInteger(id)||id<1||!Number.isSafeInteger(after)||after<0)return json({error:'IDが不正です'},400);
     const rows=(await db.prepare('SELECT * FROM observations WHERE event_id=? AND id>? ORDER BY id LIMIT 501').bind(id,after).all()).results,hasMore=rows.length>500,page=rows.slice(0,500),payloads=rows.map(r=>JSON.parse(r.payload)),positions=trajectoryPositions(payloads,{eventStart:after===0,eventEnd:!hasMore});
     return json({items:page.map((r,index)=>({...r,payload:payloads[index],position:positions[index]})),next:hasMore?page.at(-1).id:null});
+   }
+   const timelineMatch=p.match(/^\/api\/logs\/(\d+)\/timeline$/);
+   if(timelineMatch){const id=Number(timelineMatch[1]);if(!Number.isSafeInteger(id)||id<1)return json({error:'IDが不正です'},400);
+    const event=await db.prepare('SELECT train_number,service_date FROM events WHERE id=?').bind(id).first();if(!event)return json({error:'記録が見つかりません'},404);
+    const rows=(await db.prepare('SELECT source_time,payload FROM observations WHERE event_id=? ORDER BY source_time,id LIMIT 2000').bind(id).all()).results.map(row=>({...row,payload:JSON.parse(row.payload)}));
+    return json({timeline:buildTimeline(rows,{trainNumber:event.train_number,serviceDate:event.service_date})});
    }
    return json({error:'見つかりません'},404);
   }

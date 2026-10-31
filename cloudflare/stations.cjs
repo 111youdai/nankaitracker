@@ -16,6 +16,14 @@ const ROUTES=Object.freeze([
  Object.freeze(range(95,136)),Object.freeze(range(151,156)),Object.freeze(range(137,142))
 ]);
 const KOYA_ROUTES=Object.freeze([ROUTES[6],ROUTES[7]]);
+// Cumulative operating kilometres. The app feed omits Ima-miya-ebisu and
+// Haginochaya from the Nankai-main IDs, while the Koya IDs contain them.
+const MAIN_KM=Object.freeze([0,0,1.4,3,3.9,5.1,5.7,6.7,8.2,9.8,11.2,12.7,13.8,14.8,15.5,17.4,18.5,19.5,20.4,22.3,23.7,25,26,26.9,28.6,30.4,31.3,32.4,34,36.1,37.4,38.8,40.6,43.1,44.6,46.6,50.2,51.9,56.3,58,61.6,64.2]);
+const KOYA_KM=Object.freeze([0,0.9,1.4,2,3,3.9,5,5.9,6.8,7.4,8.7,10.3,11.8,12.7,13.4,14.1,15.1,16.6,17.5,19.3,20.2,21.8,22.9,24.6,25.9,28,29.7,31.3,33.2,34.9,38.6,39.9,41.9,44.7,47.8,50.4,52.2,54.2,55.9,57.6,60.6,63,64.5]);
+const DISTANCE_ROUTES=Object.freeze([
+ Object.freeze({key:'nankai',name:'南海本線',stations:ROUTES[0],km:Object.freeze(Object.fromEntries(ROUTES[0].map((id,index)=>[id,MAIN_KM[index+1]])))}),
+ Object.freeze({key:'koya',name:'高野線',stations:ROUTES[6],km:Object.freeze(Object.fromEntries(ROUTES[6].map((id,index)=>[id,KOYA_KM[index]])))})
+]);
 function stationName(value){const id=Number(value);return Number.isInteger(id)?STATION_NAMES[id]||null:null;}
 function stationLabel(value){const name=stationName(value);return name?`${name}駅`:null;}
 function routeContaining(id,routes=ROUTES){const n=Number(id);return routes.find(route=>route.includes(n))||null;}
@@ -63,4 +71,60 @@ function position(payload={},previous=null,nextPayload=null,works=null){
 function trajectoryPositions(payloads=[],options={}){return payloads.map((payload,index)=>position(payload,payloads[index-1]||null,payloads[index+1]||null,chiyodaWorks(payloads,index,options)));}
 function stationPosition(payload={}){return position(payload);}
 function observedRange(first,last){const start=stationPosition(first),end=stationPosition(last);return {first:start,last:end,text:`初回：${start.text} ／ 最終：${end.text}`};}
-module.exports={STATION_NAMES,ROUTES,stationName,stationLabel,stationPosition,trajectoryPositions,observedRange};
+function round(value,digits=1){const scale=10**digits;return Math.round(value*scale)/scale;}
+function minute(value){const [hour,minutes]=String(value).split(':').map(Number);return hour*60+minutes;}
+function minuteLabel(value){const minutes=((Math.round(value)%1440)+1440)%1440;return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;}
+function interpolatePath(stationIds,km,known){
+ const distances=new Map([[stationIds[0],0]]);for(let index=1;index<stationIds.length;index++)distances.set(stationIds[index],distances.get(stationIds[index-1])+Math.abs(km[stationIds[index]]-km[stationIds[index-1]]));
+ const anchors=Object.entries(known).map(([id,time])=>({id:Number(id),time:minute(time),distance:distances.get(Number(id))})).sort((a,b)=>stationIds.indexOf(a.id)-stationIds.indexOf(b.id));
+ return stationIds.map(id=>{
+  const exact=anchors.find(anchor=>anchor.id===id);if(exact)return {stationId:id,station:stationName(id),timeLabel:minuteLabel(exact.time),kind:'known'};
+  const distance=distances.get(id);let left=null,right=null;
+  for(const anchor of anchors){if(anchor.distance<distance)left=anchor;else if(anchor.distance>distance){right=anchor;break;}}
+  if(!left||!right)return null;
+  const time=left.time+(distance-left.distance)/(right.distance-left.distance)*(right.time-left.time);
+  return {stationId:id,station:stationName(id),timeLabel:minuteLabel(time),kind:'estimated'};
+ }).filter(Boolean);
+}
+function knownChiyodaEntry(trainNumber,serviceDate){
+ if(!['8673','8070'].includes(String(trainNumber).normalize('NFKC').replace(/^0+/,'')))return null;
+ const dow=/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)?new Date(`${serviceDate}T00:00:00Z`).getUTCDay():-1,weekend=dow===0||dow===6;
+ if(weekend){
+  const points=interpolatePath(ROUTES[6].slice(0,24),DISTANCE_ROUTES[1].km,{95:'10:43',118:'11:24'}).map(point=>({...point,line:'高野線'}));
+  return {available:true,method:'known-distance',distanceKm:25.9,averageSpeedKmh:round(25.9/(41/60)),averageIncludesStops:true,points,note:'既知の始発・終着時刻と駅間の営業キロから、各駅の通過時刻を補間しています。'};
+ }
+ const outbound=interpolatePath([7,6,5,4,3,2,1],DISTANCE_ROUTES[0].km,{7:'10:40',1:'10:52'}).map(point=>({...point,line:'南海本線'}));
+ const inbound=interpolatePath(ROUTES[6].slice(0,24),DISTANCE_ROUTES[1].km,{95:'10:58',99:'11:04',106:'11:12',107:'11:14',113:'11:20',116:'11:22',118:'11:34'}).map(point=>({...point,line:'高野線'}));
+ outbound[outbound.length-1]={...outbound[outbound.length-1],endTimeLabel:'10:58',note:'10:52着・10:58発'};
+ return {available:true,method:'known-distance',distanceKm:32.6,averageSpeedKmh:round(32.6/(48/60)),averageIncludesStops:false,points:[...outbound,...inbound.slice(1)],note:'既知時刻を固定し、その間の各駅は営業キロ比で補間しています。なんばでの6分間は平均速度から除外しています。'};
+}
+function distanceRoute(id){const value=Number(id);return DISTANCE_ROUTES.find(route=>route.stations.includes(value))||null;}
+function observationCoordinate(payload){
+ const route=distanceRoute(payload?.station_id);if(!route)return null;
+ const id=Number(payload.station_id),index=route.stations.indexOf(id),running=payload.next_station_id!=null&&payload.next_station_id!=='';
+ let value=route.km[id];
+ if(running){const next=Number(payload.next_station_id),nextIndex=route.stations.indexOf(next),step=nextIndex>=0&&Math.abs(nextIndex-index)===1?nextIndex-index:directionStep(payload.direction),adjacent=route.stations[index+step];if(adjacent!=null)value=(value+route.km[adjacent])/2;}
+ return {route,id,index,km:value,running};
+}
+function observedTimeline(rows=[]){
+ const raw=rows.map(row=>{const coordinate=observationCoordinate(row.payload),time=Date.parse(row.source_time);return coordinate&&Number.isFinite(time)?{...coordinate,time,payload:row.payload}:null;}).filter(Boolean).sort((a,b)=>a.time-b.time);
+ if(raw.length<2)return null;
+ const counts=new Map();for(const item of raw)counts.set(item.route.key,(counts.get(item.route.key)||0)+1);
+ const route=[...counts].sort((a,b)=>b[1]-a[1])[0]?.[0],same=raw.filter(item=>item.route.key===route);if(same.length<2)return null;
+ const first=same[0],candidate=same.find(item=>Math.abs(item.km-first.km)>=0.2);if(!candidate)return null;
+ const direction=Math.sign(candidate.km-first.km),anchors=[];
+ for(const item of same){const previous=anchors.at(-1);if(!previous||direction*(item.km-previous.km)>=-0.25)anchors.push(item);}
+ const last=anchors.at(-1),distance=Math.abs(last.km-first.km),hours=(last.time-first.time)/3600000;if(distance<0.2||hours<=0)return null;
+ const speed=distance/hours;if(speed>160)return null;
+ const progress=item=>direction*item.km,low=Math.min(first.km,last.km),high=Math.max(first.km,last.km),stationIds=first.route.stations.filter(id=>first.route.km[id]>=low-0.01&&first.route.km[id]<=high+0.01);if(direction<0)stationIds.reverse();
+ const points=stationIds.map(id=>{
+  const observed=anchors.filter(item=>!item.running&&item.id===id);if(observed.length)return {stationId:id,station:stationName(id),time:new Date(observed[0].time).toISOString(),endTime:observed.length>1?new Date(observed.at(-1).time).toISOString():null,kind:'observed',line:first.route.name};
+  const target=direction*first.route.km[id];let left=null,right=null;for(const anchor of anchors){const value=progress(anchor);if(value<=target)left=anchor;if(value>=target){right=anchor;break;}}
+  if(!left||!right||progress(right)-progress(left)<0.01)return null;
+  const ratio=(target-progress(left))/(progress(right)-progress(left)),time=left.time+ratio*(right.time-left.time);
+  return {stationId:id,station:stationName(id),time:new Date(time).toISOString(),kind:'estimated',line:first.route.name};
+ }).filter(Boolean);
+ return {available:true,method:'observations-distance',distanceKm:round(distance),averageSpeedKmh:round(speed),averageIncludesStops:true,points,note:'保存した在線時刻を固定点として、駅間の営業キロから通過時刻を補間しています。平均速度は停車時間を含む記録区間の値です。'};
+}
+function buildTimeline(rows=[],options={}){return knownChiyodaEntry(options.trainNumber,options.serviceDate)||observedTimeline(rows);}
+module.exports={STATION_NAMES,ROUTES,DISTANCE_ROUTES,stationName,stationLabel,stationPosition,trajectoryPositions,observedRange,buildTimeline};
