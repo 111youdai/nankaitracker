@@ -8,10 +8,39 @@ const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const publicJson=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'public, max-age=60','Access-Control-Allow-Origin':'*','X-Content-Type-Options':'nosniff'}});
+const DEPOT_NAMES=Object.freeze({'羽倉崎':'羽倉崎検車区','住ノ江':'住ノ江検車区','千代田':'千代田工場','小原田':'小原田検車区'});
+function cleanPlace(position){
+ let text=String(position?.text||position?.current||'確認できません').replace(/駅/g,'').replace(/（(?:停車中|走行中)）/g,'').replace(/\s+/g,' ').trim();
+ return text.replace(/付近$/,'').trim()||'確認できません';
+}
+function exactPlace(value){return !/[～・]|間$/.test(value)&&value!=='確認できません';}
+function depotPlace(value){return exactPlace(value)&&DEPOT_NAMES[value]?DEPOT_NAMES[value]:value;}
+function endpointPlace(value,side){
+ if(exactPlace(value))return depotPlace(value);
+ const stations=value.replace(/間$/,'').split('～').map(item=>item.trim()).filter(Boolean),candidate=side==='first'?stations[0]:stations.at(-1);
+ return candidate&&DEPOT_NAMES[candidate]?DEPOT_NAMES[candidate]:value;
+}
+function specialEndpoint(special,side){
+ const route=String(special?.route||'').split('→').map(value=>value.trim()).filter(Boolean),value=side==='first'?route[0]:route.at(-1);
+ return value&&exactPlace(value)?depotPlace(value):null;
+}
+function displayRange(firstPosition,lastPosition,special){
+ let first=endpointPlace(cleanPlace(firstPosition),'first'),last=endpointPlace(cleanPlace(lastPosition),'last');
+ const knownFirst=specialEndpoint(special,'first'),knownLast=specialEndpoint(special,'last');
+ if(special?.category==='chiyoda-entry-feeder'){
+  const observed=cleanPlace(firstPosition);
+  if(observed.includes('羽倉崎'))first=DEPOT_NAMES['羽倉崎'];
+  else if(observed.includes('住ノ江'))first=DEPOT_NAMES['住ノ江'];
+ }
+ if(knownFirst&&special?.category!=='chiyoda-entry')first=knownFirst;
+ if(knownLast)last=knownLast;
+ return {first,last,text:`${first} → ${last}`};
+}
 function decodeEvent(e){
  const {second_payload,previous_payload,...event}=e,first=JSON.parse(e.first_payload||e.last_payload),second=second_payload?JSON.parse(second_payload):null,previous=previous_payload?JSON.parse(previous_payload):null,last=JSON.parse(e.last_payload);
  const firstPosition=trajectoryPositions(second?[first,second]:[first],{eventStart:true})[0],lastPositions=trajectoryPositions(previous?[previous,last]:[last],{eventEnd:true}),lastPosition=lastPositions.at(-1);
- return {...event,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},special:specialService(e.train_number,e.service_date)};
+ const special=specialService(e.train_number,e.service_date),range=displayRange(firstPosition,lastPosition,special);
+ return {...event,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},display_range:range,special};
 }
 const eventSelect=`SELECT events.*,
  (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload,

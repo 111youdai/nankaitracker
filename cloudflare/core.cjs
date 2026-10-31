@@ -50,6 +50,7 @@ const SPECIAL_TRAINS = Object.freeze({
   '8680': {category:'temporary-deadhead',label:'臨時回送スジ',route:'小原田 → 千代田',schedule:'小原田 17:01発 → 千代田 17:24着'},
   '8721': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連回送',route:'住ノ江 → なんば',schedule:'住ノ江 13:50発 → なんば 14:02着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},
   '8722': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連・千代田回送',route:'なんば → 千代田',schedule:'なんば 14:14発 → 千代田 14:56着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},
+  '8450': {category:'chiyoda-entry-feeder',label:'千代田入場回送（前運用）',route:'羽倉崎・住ノ江 → なんば',note:'なんばで8673レ（場合により8070レ）へ列番を変え、千代田工場まで継続する入場回送'},
   '8673': {category:'chiyoda-entry',label:'千代田入場回送',route:'住ノ江 → なんば → 千代田',schedules:{weekday:'住ノ江 10:40発 → なんば 10:52着・10:58発 → 千代田 11:34着',weekend:'土日：なんば 10:43発 → 千代田 11:24着'},note:'8070レとなる場合あり'},
   '8070': {category:'chiyoda-entry',label:'千代田入場回送',route:'住ノ江 → なんば → 千代田',schedules:{weekday:'住ノ江 10:40発 → なんば 10:52着・10:58発 → 千代田 11:34着',weekend:'土日：なんば 10:43発 → 千代田 11:24着'},note:'8673レとなる場合あり'}
 });

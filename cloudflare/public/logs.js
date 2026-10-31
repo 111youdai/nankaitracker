@@ -34,19 +34,56 @@ async function status(){
  }catch(e){$('status').className='panel';$('status').textContent='監視状況を取得できません。監視中かどうか確認できない状態です。';error(e);}
 }
 async function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}
-function card(e){
- const known=e.special,a=el('article'),top=el('div',undefined,'top');top.append(el('h2',`${e.train_number} 列車`),el('span',known?.label||'定期外候補','tag'+(known?' known':'')));a.append(top);
- if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
- const d=el('div',undefined,'details');const p=e.last_payload,last=e.last_position;
- for(const [k,v] of [['編成（最後に検証できた値）',e.formation.text],['運行日・系統',`${e.service_date} ／ ${e.group_name==='nankai'?'南海線系統':'高野線系統'}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(e.last_seen)}`],['確認できた運転範囲',e.observed_range?.text||'確認できません'],['最終確認地点',last?`${last.text} ／ ${last.directionLabel}`:`${p.station_id??'不明'} ／ ${p.direction??'方向不明'}`]]){const c=el('div',k,'muted');c.append(el('b',v));d.append(c);}a.append(d);
- const button=el('button','推定時刻・在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
- button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const [data,result]=await Promise.all([allHistory(e.id),api(`/api/logs/${e.id}/timeline`)]);history.replaceChildren(timelineView(result.timeline),el('p',`在線履歴 ${data.length}件`));for(const o of data){const row=el('details'),where=o.position?.text||'位置不明';row.append(el('summary',`${clock(o.source_time)}　${where}`),el('pre',JSON.stringify(o.payload,null,2)));history.append(row);}const b=el('details');b.append(el('summary','照合した運用表'),el('pre',JSON.stringify(e.baseline,null,2)));history.append(b);history.hidden=false;}catch(e){error(e);}finally{button.disabled=false;}};
+const trainKey=value=>String(value??'').normalize('NFKC').replace(/^0+(?=\d)/,'');
+const atNamba=position=>/なんば/.test(`${position?.current||''} ${position?.text||''}`);
+function formationKey(event){
+ const formation=event.formation;
+ return formation?.verified&&!/未確認/.test(formation.text||'')?String(formation.text).replace(/\s+/g,'').toUpperCase():'';
+}
+function canLink(first,second){
+ if(first.service_date!==second.service_date||first.group_name===second.group_name||!atNamba(first.last_position)||!atNamba(second.first_position))return false;
+ const gap=Date.parse(second.first_seen)-Date.parse(first.last_seen);
+ if(!Number.isFinite(gap)||gap < -120000||gap > 45*60000)return false;
+ const explicit=trainKey(first.train_number)==='8450'&&['8673','8070'].includes(trainKey(second.train_number)),a=formationKey(first),b=formationKey(second);
+ return explicit?(!a||!b||a===b):!!a&&a===b;
+}
+function groupRuns(items){
+ const ordered=[...items].sort((a,b)=>Date.parse(a.first_seen)-Date.parse(b.first_seen)||a.id-b.id),used=new Set(),groups=[];
+ for(const event of ordered){
+  if(used.has(event.id))continue;
+  const chain=[event];used.add(event.id);
+  while(true){const next=ordered.find(candidate=>!used.has(candidate.id)&&canLink(chain.at(-1),candidate));if(!next)break;chain.push(next);used.add(next.id);}
+  groups.push(chain);
+ }
+ return groups.sort((a,b)=>Math.max(...b.map(x=>x.id))-Math.max(...a.map(x=>x.id)));
+}
+function chainRange(events){const first=events[0],last=events.at(-1);return `${first.display_range?.first||'確認できません'} → ${last.display_range?.last||'確認できません'}`;}
+function chainGroups(events){return [...new Set(events.map(event=>event.group_name==='nankai'?'南海線系統':'高野線系統'))].join(' → ');}
+function verifiedFormation(events){return [...events].reverse().find(event=>formationKey(event))?.formation?.text||events.at(-1).formation?.text||'編成未確認';}
+function appendHistory(history,event,data,result,linked){
+ if(linked)history.append(el('h3',`${event.train_number}列車`,'segment-title'));
+ history.append(timelineView(result.timeline),el('p',`在線履歴 ${data.length}件`));
+ for(const observation of data){const row=el('details'),where=observation.position?.text||'位置不明';row.append(el('summary',`${clock(observation.source_time)}　${where}`),el('pre',JSON.stringify(observation.payload,null,2)));history.append(row);}
+ const baseline=el('details');baseline.append(el('summary','照合した運用表'),el('pre',JSON.stringify(event.baseline,null,2)));history.append(baseline);
+}
+function card(input){
+ const events=Array.isArray(input)?input:[input],e=events[0],lastEvent=events.at(-1),linked=events.length>1,known=lastEvent.special||e.special,a=el('article',undefined,linked?'linked-card':''),top=el('div',undefined,'top'),numbers=events.map(event=>`${event.train_number}列車`).join(' → ');
+ top.append(el('h2',numbers),el('span',linked?'一連の運転':known?.label||'定期外候補','tag'+(known||linked?' known':'')));a.append(top);
+ if(linked){
+  const explicit=trainKey(e.train_number)==='8450'&&['8673','8070'].includes(trainKey(lastEvent.train_number)),box=el('div',undefined,'known-service chain-service');
+  box.append(el('strong',explicit?'千代田入場回送':'なんば折返しを含む一連の運転'),el('div','列番：'+numbers),el('div','運転区間：'+chainRange(events)),el('small','同一編成・なんばでの折返し・前後の確認時刻から一連の運転としてまとめています。'));a.append(box);
+ }else if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
+ const details=el('div',undefined,'details'),rows=[['編成（最後に検証できた値）',verifiedFormation(events)],['運行日・系統',`${e.service_date} ／ ${chainGroups(events)}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(lastEvent.last_seen)}`],['推定した運転区間',chainRange(events)],['最終確認地点',lastEvent.display_range?.last||'確認できません']];
+ if(linked)rows.splice(1,0,['列番のつながり',numbers]);
+ for(const [label,value] of rows){const cell=el('div',label,'muted');cell.append(el('b',value));details.append(cell);}a.append(details);
+ const button=el('button',linked?'各列車の推定時刻・在線履歴':'推定時刻・在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);
+ button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const results=await Promise.all(events.map(async event=>({event,data:await allHistory(event.id),result:await api(`/api/logs/${event.id}/timeline`)})));history.replaceChildren();for(const item of results)appendHistory(history,item.event,item.data,item.result,linked);history.hidden=false;}catch(exception){error(exception);}finally{button.disabled=false;}};
  return a;
 }
 async function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{
  if(reset){params=new URLSearchParams({date:$('date').value,group:$('group').value,q:$('query').value});next=null;}
  const query=new URLSearchParams(params);if(next)query.set('before',next);
- const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const e of data.items)$('events').append(card(e));
+ const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const group of groupRuns(data.items))$('events').append(card(group));
  if(reset&&!data.items.length)$('events').append(el('p','該当する記録はありません。監視開始前の履歴は取得できません。'));
  if(reset)logsLoaded=true;
  next=data.next;$('more').hidden=!next;await status();
