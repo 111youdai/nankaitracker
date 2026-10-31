@@ -49,6 +49,20 @@ async function getLiveFormationData() {
     return await response.json();
 }
 
+async function getLiveIrregularData() {
+    const response = await fetch(
+        `${TRACKER_LOG_WORKER}/api/live-irregular`
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `定期外列車照合エラー: ${response.status}`
+        );
+    }
+
+    return await response.json();
+}
+
 async function getTrainDetail(
     trainNumber,
     lineId = window.activeLineId || 2

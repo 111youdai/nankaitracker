@@ -294,6 +294,41 @@ function getFormationInfo(train) {
 
 window.resolveTrainFormation = getFormationInfo;
 
+const KNOWN_IRREGULAR_TRAINS = Object.freeze({
+    "8376": "千代田出場試運転（上り）",
+    "8679": "千代田出場試運転（下り）",
+    "9185": "廃車回送（廃回）スジ",
+    "8680": "臨時回送スジ",
+    "8721": "泉北ライナー代走関連回送",
+    "8722": "泉北ライナー代走関連・千代田回送",
+    "8673": "千代田入場回送",
+    "8070": "千代田入場回送"
+});
+
+function normalizeTrainKey(value) {
+    return String(value ?? "")
+        .normalize("NFKC")
+        .trim()
+        .replace(/^回\s*/, "")
+        .replace(/^0+(?=\d)/, "")
+        .toUpperCase();
+}
+
+function getIrregularInfo(train) {
+    const trainKey = normalizeTrainKey(train.train_number);
+    const groupKey = Number(train.line_id) === 1 ? "nankai" : "koya";
+    const detected =
+        window.liveIrregularMap?.get?.(`${groupKey}:${trainKey}`) ||
+        window.liveIrregularMap?.[`${groupKey}:${trainKey}`];
+
+    if (detected) return detected;
+
+    const knownLabel = KNOWN_IRREGULAR_TRAINS[trainKey];
+    return knownLabel
+        ? { label: knownLabel, known: true }
+        : null;
+}
+
 function normalizePlacementStationId(
     stationId,
     aliases
@@ -460,6 +495,15 @@ function showTrains(
         trainElement.className =
             "train";
 
+        const irregularInfo =
+            getIrregularInfo(train);
+
+        if (irregularInfo) {
+            trainElement.classList.add("irregular");
+            trainElement.dataset.irregularLabel =
+                irregularInfo.label || "定期外候補";
+        }
+
         trainElement.onclick = () => {
             openDetail(train);
         };
@@ -503,7 +547,13 @@ function showTrains(
                 ? `<div class="train-formation-source">Hub確認</div>`
                 : "";
 
+        const irregularBadge = irregularInfo
+            ? `<div class="train-irregular-badge">定期外</div>`
+            : "";
+
         trainElement.innerHTML = `
+            ${irregularBadge}
+
             <div class="train-kind">
                 ${escapeHtml(kindInfo.trainType)}
             </div>
@@ -754,6 +804,18 @@ function renderTrainDetail({
             formationInfo
         );
 
+    const irregularInfo =
+        getIrregularInfo(train);
+
+    const irregularHtml = irregularInfo
+        ? `
+            <div class="detail-irregular">
+                <strong>定期外列番として検出</strong>
+                <span>${escapeHtml(irregularInfo.label || "通常ダイヤにない列番として記録中")}</span>
+            </div>
+        `
+        : "";
+
     const warningHtml =
         warningText
             ? `
@@ -770,6 +832,8 @@ function renderTrainDetail({
         <h2>
             🚃 ${escapeHtml(train.train_number)}列車
         </h2>
+
+        ${irregularHtml}
 
         ${warningHtml}
 

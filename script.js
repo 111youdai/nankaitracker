@@ -31,6 +31,7 @@ const appState = {
     trainData: null,
     lineData: null,
     liveFormationData: null,
+    liveIrregularData: null,
     stationLookup: new Map()
 };
 let refreshLabelResetTimer = null;
@@ -277,7 +278,7 @@ async function loadApp() {
     if (refreshLabel) refreshLabel.textContent = "更新中…";
 
     try {
-        const [trainData, lineData, liveFormationData] =
+        const [trainData, lineData, liveFormationData, liveIrregularData] =
             await Promise.all([
                 getTrainData(),
                 getLineData(),
@@ -287,14 +288,25 @@ async function loadApp() {
                         error
                     );
                     return { items: {} };
+                }),
+                getLiveIrregularData().catch(error => {
+                    console.warn(
+                        "定期外列車の照合を取得できませんでした",
+                        error
+                    );
+                    return { items: {} };
                 })
             ]);
 
         appState.trainData = trainData;
         appState.lineData = lineData;
         appState.liveFormationData = liveFormationData;
+        appState.liveIrregularData = liveIrregularData;
         window.hubFormationMap = new Map(
             Object.entries(liveFormationData?.items || {})
+        );
+        window.liveIrregularMap = new Map(
+            Object.entries(liveIrregularData?.items || {})
         );
         appState.stationLookup =
             buildStationLookup(lineData);

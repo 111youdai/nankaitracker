@@ -26,6 +26,13 @@ export async function handle(request,env){
    if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
    return publicJson(await refreshLiveFormations(db,new Date()));
   }
+  if(p==='/api/live-irregular'){
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Max-Age':'86400'}});
+   if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
+   const cutoff=new Date(Date.now()-5*60000).toISOString(),rows=(await db.prepare('SELECT group_name,train_number,last_seen FROM events WHERE last_seen>=? ORDER BY last_seen DESC LIMIT 100').bind(cutoff).all()).results,items={};
+   for(const row of rows){const trainKey=core.numberKey(row.train_number),special=specialService(row.train_number);items[`${row.group_name}:${trainKey}`]={trainNumber:row.train_number,label:special?.label||'定期外候補',category:special?.category||'candidate',lastSeen:row.last_seen};}
+   return publicJson({fetchedAt:new Date().toISOString(),items});
+  }
   if(p==='/api/auth/logs'&&request.method==='POST'){
    if(!env.LOG_ACCESS_PASSWORD)return json({error:'Cloudflareにログ用パスワードが未設定です'},503);
    const body=await request.text();if(body.length>1024)return json({error:'リクエストが大きすぎます'},413);

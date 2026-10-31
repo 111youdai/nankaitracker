@@ -807,6 +807,16 @@ async function handle(request, env) {
       if (request.method !== "GET") return publicJson({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
       return publicJson(await refreshLiveFormations(db, /* @__PURE__ */ new Date()));
     }
+    if (p === "/api/live-irregular") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Max-Age": "86400" } });
+      if (request.method !== "GET") return publicJson({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+      const cutoff = new Date(Date.now() - 5 * 6e4).toISOString(), rows = (await db.prepare("SELECT group_name,train_number,last_seen FROM events WHERE last_seen>=? ORDER BY last_seen DESC LIMIT 100").bind(cutoff).all()).results, items = {};
+      for (const row of rows) {
+        const trainKey = import_core2.default.numberKey(row.train_number), special = specialService(row.train_number);
+        items[`${row.group_name}:${trainKey}`] = { trainNumber: row.train_number, label: special?.label || "\u5B9A\u671F\u5916\u5019\u88DC", category: special?.category || "candidate", lastSeen: row.last_seen };
+      }
+      return publicJson({ fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), items });
+    }
     if (p === "/api/auth/logs" && request.method === "POST") {
       if (!env.LOG_ACCESS_PASSWORD) return json({ error: "Cloudflare\u306B\u30ED\u30B0\u7528\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u672A\u8A2D\u5B9A\u3067\u3059" }, 503);
       const body = await request.text();

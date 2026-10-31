@@ -392,6 +392,26 @@ a { color: inherit; text-decoration: none; }
 @keyframes searchPulse { 50% { transform: scale(1.08); background: #176b65; } }
 .up-track .train { border-left: 3px solid var(--blue); }
 .down-track .train { border-left: 3px solid var(--orange); }
+.train.irregular {
+    border-color: #ff789f;
+    background: linear-gradient(145deg, #7c173f, #3d1027);
+    box-shadow: 0 0 0 2px rgba(255, 89, 139, .18), 0 8px 24px rgba(44, 5, 25, .58);
+}
+.train.irregular:hover, .train.irregular:focus-visible {
+    border-color: #ffd166;
+    box-shadow: 0 0 0 3px rgba(255, 209, 102, .2), 0 10px 30px rgba(44, 5, 25, .65);
+}
+.train-irregular-badge {
+    width: max-content;
+    margin: -3px auto 3px;
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: #ffd166;
+    color: #451328;
+    font-size: 7px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+}
 .train-kind { overflow: hidden; color: #adc3c7; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .train-number { font-size: 17px; font-weight: 900; }
 .train-cars { color: #adc3c7; font-size: 9px; }
@@ -480,6 +500,19 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     font-size: 12px;
     line-height: 1.55;
 }
+.detail-irregular {
+    display: grid;
+    gap: 3px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 120, 159, .55);
+    border-left: 4px solid #ff5c8b;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(124, 23, 63, .88), rgba(61, 16, 39, .9));
+    color: #fff;
+}
+.detail-irregular strong { color: #ffd166; font-size: 12px; }
+.detail-irregular span { font-size: 11px; line-height: 1.5; }
 
 #versionModal {
     width: min(520px, calc(100% - 28px));
