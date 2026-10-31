@@ -33,6 +33,7 @@ const appState = {
     liveFormationData: null,
     stationLookup: new Map()
 };
+let refreshLabelResetTimer = null;
 
 function range(start, end) {
     return Array.from(
@@ -258,6 +259,23 @@ window.switchNankaiTrackerLine =
     requestMode;
 
 async function loadApp() {
+    const refreshButton =
+        document.getElementById("refreshTrains");
+    const refreshLabel =
+        refreshButton?.querySelector(".refresh-label");
+
+    if (refreshLabelResetTimer) {
+        window.clearTimeout(refreshLabelResetTimer);
+        refreshLabelResetTimer = null;
+    }
+
+    if (refreshButton) {
+        refreshButton.disabled = true;
+        refreshButton.classList.add("loading");
+        refreshButton.setAttribute("aria-busy", "true");
+    }
+    if (refreshLabel) refreshLabel.textContent = "更新中…";
+
     try {
         const [trainData, lineData, liveFormationData] =
             await Promise.all([
@@ -325,6 +343,9 @@ async function loadApp() {
 
         renderMode(initialMode);
 
+        if (refreshLabel) refreshLabel.textContent = "更新完了";
+        return true;
+
     } catch (error) {
         console.error(
             "loadAppエラー:",
@@ -346,6 +367,21 @@ async function loadApp() {
         if (cloudState) {
             cloudState.classList.add("error");
             cloudState.innerHTML = "<i></i>取得できません";
+        }
+        if (refreshLabel) refreshLabel.textContent = "再試行";
+        return false;
+    } finally {
+        if (refreshButton) {
+            refreshButton.disabled = false;
+            refreshButton.classList.remove("loading");
+            refreshButton.removeAttribute("aria-busy");
+        }
+
+        if (refreshLabel?.textContent === "更新完了") {
+            refreshLabelResetTimer = window.setTimeout(() => {
+                refreshLabel.textContent = "位置を更新";
+                refreshLabelResetTimer = null;
+            }, 1500);
         }
     }
 }
@@ -557,5 +593,9 @@ setAppView(
         ? (LINE_MODES.has(initialHash) ? "route" : initialHash)
         : "home",
     false
+);
+document.getElementById("refreshTrains")?.addEventListener(
+    "click",
+    () => void loadApp()
 );
 loadApp();
