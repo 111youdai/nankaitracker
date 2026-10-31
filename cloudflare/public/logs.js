@@ -41,7 +41,7 @@ function formationKey(event){
  return formation?.verified&&!/未確認/.test(formation.text||'')?String(formation.text).replace(/\s+/g,'').toUpperCase():'';
 }
 function canLink(first,second){
- if(first.service_date!==second.service_date||first.group_name===second.group_name||!atNamba(first.last_position)||!atNamba(second.first_position))return false;
+ if(first.service_date!==second.service_date||!atNamba(first.last_position)||!atNamba(second.first_position))return false;
  const gap=Date.parse(second.first_seen)-Date.parse(first.last_seen);
  if(!Number.isFinite(gap)||gap < -120000||gap > 45*60000)return false;
  const explicit=trainKey(first.train_number)==='8450'&&['8673','8070'].includes(trainKey(second.train_number)),a=formationKey(first),b=formationKey(second);
@@ -62,8 +62,11 @@ function chainGroups(events){return [...new Set(events.map(event=>event.group_na
 function verifiedFormation(events){return [...events].reverse().find(event=>formationKey(event))?.formation?.text||events.at(-1).formation?.text||'編成未確認';}
 function appendHistory(history,event,data,result,linked){
  if(linked)history.append(el('h3',`${event.train_number}列車`,'segment-title'));
- history.append(timelineView(result.timeline),el('p',`在線履歴 ${data.length}件`));
- for(const observation of data){const row=el('details'),where=observation.position?.text||'位置不明';row.append(el('summary',`${clock(observation.source_time)}　${where}`),el('pre',JSON.stringify(observation.payload,null,2)));history.append(row);}
+ history.append(timelineView(result.timeline));
+ const observations=el('details',undefined,'observation-group');observations.append(el('summary',`在線履歴 ${data.length}件（開く）`));
+ const observationList=el('div',undefined,'observation-list');
+ for(const observation of data){const row=el('details'),where=observation.position?.text||'位置不明';row.append(el('summary',`${clock(observation.source_time)}　${where}`),el('pre',JSON.stringify(observation.payload,null,2)));observationList.append(row);}
+ observations.append(observationList);history.append(observations);
  const baseline=el('details');baseline.append(el('summary','照合した運用表'),el('pre',JSON.stringify(event.baseline,null,2)));history.append(baseline);
 }
 function card(input){
