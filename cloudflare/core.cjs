@@ -46,7 +46,7 @@ function formation(t) {
 const SPECIAL_TRAINS = Object.freeze({
   '8376': {category:'chiyoda-test',label:'千代田出場試運転（上り）',route:'千代田出場・上り',note:'千代田工場出場後の試運転に使われる列番'},
   '8679': {category:'chiyoda-test',label:'千代田出場試運転（下り）',route:'千代田出場・下り',note:'千代田工場出場後の試運転に使われる列番'},
-  '9185': {category:'scrap-transfer',label:'廃車回送（廃回）スジ',route:'千代田 → 小原田',note:'千代田発・小原田行きの廃車回送スジ'},
+  '9185': {category:'scrap-transfer',label:'臨時回送',route:'千代田 → 小原田',note:'千代田発・小原田行きの廃回スジとして知られる列番'},
   '8680': {category:'temporary-deadhead',label:'臨時回送スジ',route:'小原田 → 千代田',schedule:'小原田 17:01発 → 千代田 17:24着'},
   '8721': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連回送',route:'住ノ江 → なんば',schedule:'住ノ江 13:50発 → なんば 14:02着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},
   '8722': {category:'liner-substitute-deadhead',label:'泉北ライナー代走関連・千代田回送',route:'なんば → 千代田',schedule:'なんば 14:14発 → 千代田 14:56着',note:'11000系の高野線特急貸出時に、泉北ライナーを代走するサザン車の回送'},

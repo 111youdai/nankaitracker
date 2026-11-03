@@ -297,7 +297,7 @@ window.resolveTrainFormation = getFormationInfo;
 const KNOWN_IRREGULAR_TRAINS = Object.freeze({
     "8376": "千代田出場試運転（上り）",
     "8679": "千代田出場試運転（下り）",
-    "9185": "廃車回送（廃回）スジ",
+    "9185": "臨時回送",
     "8680": "臨時回送スジ",
     "8721": "泉北ライナー代走関連回送",
     "8722": "泉北ライナー代走関連・千代田回送",
