@@ -329,6 +329,8 @@ function getIrregularInfo(train) {
         : null;
 }
 
+window.getTrainIrregularInfo = getIrregularInfo;
+
 function normalizePlacementStationId(
     stationId,
     aliases
