@@ -254,124 +254,6 @@ a { color: inherit; text-decoration: none; }
 .route-legend i.up { background: var(--blue); }
 .route-legend i.down { background: var(--orange); }
 
-.location-view-switcher {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    width: min(430px, 100%);
-    margin: 0 0 18px;
-    padding: 5px;
-    border: 1px solid var(--line);
-    border-radius: 15px;
-    background: #071a22;
-}
-.location-view-btn {
-    min-height: 42px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-weight: 800;
-}
-.location-view-btn.active { background: var(--surface-3); color: var(--text); box-shadow: 0 7px 20px rgba(0,0,0,.22); }
-.live-map-panel, .chase-panel {
-    position: relative;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: #071923;
-}
-.map-toolbar, .chase-toolbar {
-    position: relative;
-    z-index: 5;
-    min-height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--line);
-    background: rgba(8,27,35,.94);
-}
-.map-toolbar p { display: flex; flex-direction: column; gap: 2px; margin: 0; }
-.map-toolbar b, .chase-toolbar b { color: var(--teal); font-size: 10px; letter-spacing: .14em; }
-.map-toolbar span, .chase-toolbar span { color: var(--muted); font-size: 10px; }
-.map-toolbar button, .chase-camera-switch button, .chase-train-info button {
-    min-height: 34px;
-    padding: 0 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface-2);
-    color: var(--text);
-    cursor: pointer;
-}
-.live-map-canvas {
-    min-height: 600px;
-    background:
-        radial-gradient(circle at 70% 20%, rgba(41,72,87,.42), transparent 28%),
-        linear-gradient(160deg, #0a1725, #101f2d 60%, #09151f);
-}
-.live-map-canvas svg { display: block; width: 100%; height: min(70dvh, 760px); min-height: 600px; }
-.map-coast { fill: #10314c; opacity: .85; }
-.map-route-shadow { fill: none; stroke: rgba(0,0,0,.75); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
-.map-route-line { fill: none; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
-.map-station { fill: #d7e4e6; stroke: #071923; stroke-width: 1.8; }
-.map-train-marker { cursor: pointer; filter: drop-shadow(0 5px 5px rgba(0,0,0,.55)); outline: none; }
-.map-train-marker circle { fill: #e9f4f5; stroke: #174d5c; stroke-width: 3; transition: r .16s ease, stroke .16s ease; }
-.map-train-marker text { fill: #071923; font-size: 7px; font-weight: 1000; pointer-events: none; }
-.map-train-marker:hover circle, .map-train-marker:focus circle, .map-train-marker.selected circle { r: 16; stroke: var(--teal); stroke-width: 5; }
-.map-train-marker.irregular circle { fill: #ffd166; stroke: #ff5c8b; }
-.map-train-card {
-    position: absolute;
-    z-index: 6;
-    left: 50%;
-    bottom: 18px;
-    width: min(420px, calc(100% - 24px));
-    padding: 14px;
-    transform: translateX(-50%);
-    border: 1px solid rgba(255,255,255,.25);
-    border-left: 5px solid var(--teal);
-    border-radius: 16px;
-    background: rgba(235,244,245,.95);
-    color: #091923;
-    box-shadow: 0 18px 50px rgba(0,0,0,.45);
-}
-.map-train-card.irregular { border-left-color: #ff5c8b; }
-.map-train-card > div:first-of-type { display: flex; flex-direction: column; }
-.map-train-card small { color: #61737a; }
-.map-train-card strong { font-size: 21px; }
-.map-train-card p { margin: 5px 0; font-size: 12px; }
-.map-card-close { position: absolute; top: 8px; right: 8px; border: 0; background: transparent; color: #40535b; cursor: pointer; font-size: 20px; }
-.map-card-actions { display: flex; gap: 8px; margin-top: 10px; }
-.map-card-actions button { flex: 1; min-height: 38px; border: 0; border-radius: 10px; background: #143c49; color: #fff; cursor: pointer; font-weight: 800; }
-.map-card-actions button:last-child { background: #17a690; }
-
-.chase-toolbar > div:first-child { display: flex; flex-direction: column; gap: 3px; }
-.chase-camera-switch { display: flex; gap: 5px; }
-.chase-camera-switch button.active { border-color: var(--teal); background: #165b56; }
-.chase-viewport { position: relative; height: min(62dvh, 620px); min-height: 460px; overflow: hidden; perspective: 800px; background: #071224; }
-.chase-sky { position: absolute; inset: 0 0 47%; background: linear-gradient(#071224, #183049); }
-.chase-ground { position: absolute; left: -30%; right: -30%; top: 48%; bottom: -20%; transform: rotateX(57deg); transform-origin: top; background: repeating-linear-gradient(90deg, #243740 0 80px, #1c3037 80px 160px); }
-.chase-rails { position: absolute; left: 50%; top: 48%; width: 390px; height: 520px; transform: translateX(-50%) rotateX(61deg); transform-origin: top; background: repeating-linear-gradient(0deg, transparent 0 25px, rgba(190,184,165,.65) 25px 29px); }
-.chase-rails i { position: absolute; top: 0; bottom: 0; width: 7px; background: linear-gradient(#41d7bd, #71848b); }
-.chase-rails i:nth-child(1) { left: 36%; }.chase-rails i:nth-child(2) { left: 45%; }.chase-rails i:nth-child(3) { right: 45%; }.chase-rails i:nth-child(4) { right: 36%; }
-.chase-train-model { position: absolute; z-index: 3; left: 50%; bottom: 75px; width: 145px; height: 180px; transform: translateX(-50%); border: 7px solid #d9e2e3; border-radius: 55px 55px 12px 12px; background: linear-gradient(90deg, #dedede 0 15%, #254552 15% 85%, #dedede 85%); box-shadow: 0 30px 45px rgba(0,0,0,.55); }
-.chase-train-model::before { content: ""; position: absolute; left: 19px; right: 19px; top: 37px; height: 64px; border-radius: 28px 28px 8px 8px; background: #08131c; }
-.chase-train-model::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 25px; height: 9px; background: var(--teal); }
-.chase-train-model span { position: absolute; left: 0; right: 0; bottom: 42px; color: #10252d; text-align: center; font-size: 10px; font-weight: 900; }
-.chase-viewport[data-camera="front"] .chase-train-model { display: none; }
-.chase-viewport.irregular .chase-train-model::after { background: #ff5c8b; }
-.chase-next-station { position: absolute; z-index: 4; top: 20px; left: 50%; min-width: 240px; padding: 10px 16px; transform: translateX(-50%); border-radius: 12px; background: rgba(235,244,245,.92); color: #0b1d25; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,.3); }
-.chase-next-station small, .chase-next-station b { display: block; }
-.chase-next-station small { color: #6b7b80; font-size: 10px; }
-.chase-train-info { position: absolute; z-index: 4; left: 50%; bottom: 15px; width: min(460px, calc(100% - 24px)); display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 11px 13px; transform: translateX(-50%); border-radius: 14px; background: rgba(235,244,245,.94); color: #0b1d25; }
-.chase-train-info strong { font-size: 22px; }.chase-train-info span { color: #607279; font-size: 11px; }.chase-train-info button { background: #143c49; color: #fff; }
-.chase-train-list { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-top: 1px solid var(--line); }
-.chase-train-list > button { min-width: 150px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; }
-.chase-train-list > button.irregular { border-color: #ff5c8b; background: #45162c; }
-.chase-train-list b, .chase-train-list span { display: block; }.chase-train-list span { margin-top: 3px; color: var(--muted); font-size: 9px; }
-
 .records-workspace {
     min-height: calc(100dvh - 104px);
     margin: 22px 0 70px;
@@ -702,13 +584,6 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .refresh-trains-btn { min-width: 90px; min-height: 48px; padding: 0 10px; border-radius: 15px; font-size: 11px; }
     .line-switch-btn { flex: 1; padding: 10px 8px; font-size: 12px; }
     .route-legend { gap: 10px; overflow-x: auto; white-space: nowrap; }
-    .location-view-switcher { position: sticky; top: calc(62px + env(safe-area-inset-top)); z-index: 12; width: 100%; margin-bottom: 10px; background: rgba(7,26,34,.95); backdrop-filter: blur(12px); }
-    .live-map-panel, .chase-panel { margin: 0 -2px; border-radius: 16px; }
-    .live-map-canvas, .live-map-canvas svg { min-height: calc(100dvh - 280px); height: calc(100dvh - 280px); }
-    .chase-viewport { min-height: calc(100dvh - 340px); height: calc(100dvh - 340px); }
-    .chase-train-model { width: 105px; height: 138px; bottom: 70px; }
-    .chase-train-info { grid-template-columns: auto 1fr; }
-    .chase-train-info button { grid-column: 1 / -1; min-height: 36px; }
     #line { gap: 14px; }
     .route-section { border-radius: 15px; }
     .route-section-header { padding: 11px 12px; }

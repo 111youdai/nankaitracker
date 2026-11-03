@@ -13,7 +13,7 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261103a">
+    <link rel="stylesheet" href="style.css?v=20261031c">
 </head>
 <body>
     <header class="app-header">
@@ -84,44 +84,7 @@
             </div>
 
             <div class="route-legend" aria-label="凡例"><span><i class="up"></i>上り</span><span><i class="down"></i>下り</span><span>列車をタップすると詳細を表示</span></div>
-            <div class="location-view-switcher" role="tablist" aria-label="在線表示方法">
-                <button class="location-view-btn active" type="button" data-location-view="route" role="tab" aria-selected="true">路線図</button>
-                <button class="location-view-btn" type="button" data-location-view="map" role="tab" aria-selected="false">地図</button>
-                <button class="location-view-btn" type="button" data-location-view="chase" role="tab" aria-selected="false">簡易3D</button>
-            </div>
-
-            <div id="line" class="location-view" data-location-panel="route" aria-live="polite"><div class="loading-card">列車位置を読み込んでいます…</div></div>
-
-            <section id="liveMapPanel" class="location-view live-map-panel" data-location-panel="map" hidden aria-label="列車位置地図">
-                <div class="map-toolbar">
-                    <p><b>LIVE MAP</b><span>列車を押すと追跡できます</span></p>
-                    <button id="fitLiveMap" type="button">全体表示</button>
-                </div>
-                <div id="liveMap" class="live-map-canvas"></div>
-                <div id="mapTrainCard" class="map-train-card" hidden></div>
-            </section>
-
-            <section id="chasePanel" class="location-view chase-panel" data-location-panel="chase" hidden aria-label="列車簡易3D追跡">
-                <div class="chase-toolbar">
-                    <div>
-                        <b>SIMPLIFIED 3D</b>
-                        <span id="chaseHint">地図で列車を選ぶか、下の一覧から選択してください</span>
-                    </div>
-                    <div class="chase-camera-switch" role="group" aria-label="視点切替">
-                        <button type="button" class="active" data-chase-camera="rear">後方</button>
-                        <button type="button" data-chase-camera="front">前面</button>
-                    </div>
-                </div>
-                <div id="chaseViewport" class="chase-viewport">
-                    <div class="chase-sky"></div>
-                    <div class="chase-ground"></div>
-                    <div class="chase-rails"><i></i><i></i><i></i><i></i></div>
-                    <div id="chaseTrainModel" class="chase-train-model"><span>NANKAI</span></div>
-                    <div id="chaseNextStation" class="chase-next-station">列車を選択してください</div>
-                    <div id="chaseTrainInfo" class="chase-train-info"></div>
-                </div>
-                <div id="chaseTrainList" class="chase-train-list"></div>
-            </section>
+            <div id="line" aria-live="polite"><div class="loading-card">列車位置を読み込んでいます…</div></div>
         </section>
 
         <section id="recordsWorkspace" class="records-workspace" hidden>
@@ -149,7 +112,6 @@
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
-            <section><b>Ver 1.5.0</b><p>ライブ地図、列車追跡カード、前面・後方を切り替えられる簡易3D表示を追加。</p></section>
             <section><b>Ver 1.4.2</b><p>ログ・編成状況をトラッカー内へ統合し、在線カードへ編成番号を追加。</p></section>
             <section><b>Ver 1.4.1</b><p>ホームと在線を画面切替式に変更。南海・高野・泉北・支線を分離し、ホーム画面アプリ表示に対応。</p></section>
             <section><b>Ver 1.4.0</b><p>スマートフォン向けデザインへ刷新。カードホーム・縦型在線表示・運用ボード型ログを統合。</p></section>
@@ -159,8 +121,8 @@
         </div>
     </dialog>
 
-    <script src="api.js?v=20261103a"></script>
-    <script src="ui.js?v=20261103a"></script>
-    <script type="module" src="script.js?v=20261103a"></script>
+    <script src="api.js?v=20261031c"></script>
+    <script src="ui.js?v=20261031c"></script>
+    <script type="module" src="script.js?v=20261031c"></script>
 </body>
 </html>

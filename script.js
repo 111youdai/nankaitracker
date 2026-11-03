@@ -7,11 +7,6 @@ import {
     canPlaceOnSemboku,
     analyzeTrainFormation
 } from "./train-kind.js";
-import {
-    setChaseCamera,
-    setMapMode,
-    updateLiveMap
-} from "./map-view.js";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
@@ -40,7 +35,6 @@ const appState = {
     stationLookup: new Map()
 };
 let refreshLabelResetTimer = null;
-let activeLocationView = "route";
 
 function range(start, end) {
     return Array.from(
@@ -242,8 +236,6 @@ function renderMode(mode) {
         }
     );
 
-    setMapMode(normalizedMode);
-
     const detailPanel =
         document.getElementById(
             "detailPanel"
@@ -318,12 +310,6 @@ async function loadApp() {
         );
         appState.stationLookup =
             buildStationLookup(lineData);
-
-        updateLiveMap({
-            trains: trainData.trains || [],
-            stationLookup: appState.stationLookup,
-            mode: window.activeLineMode || MODE_NANKAI
-        });
 
         const trainCount = (trainData.trains || []).filter(
             train => [1, 2].includes(Number(train.line_id))
@@ -624,35 +610,4 @@ document.getElementById("refreshTrains")?.addEventListener(
     "click",
     () => void loadApp()
 );
-
-function setLocationView(view) {
-    activeLocationView = ["route", "map", "chase"].includes(view) ? view : "route";
-    document.querySelectorAll("[data-location-panel]").forEach(panel => {
-        panel.hidden = panel.dataset.locationPanel !== activeLocationView;
-    });
-    document.querySelectorAll(".location-view-btn").forEach(button => {
-        const active = button.dataset.locationView === activeLocationView;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-selected", active ? "true" : "false");
-    });
-    localStorage.setItem("nankaiTrackerLocationView", activeLocationView);
-}
-
-window.setNankaiLocationView = setLocationView;
-document.querySelectorAll(".location-view-btn").forEach(button => {
-    button.addEventListener("click", () => setLocationView(button.dataset.locationView));
-});
-document.querySelectorAll("[data-chase-camera]").forEach(button => {
-    button.addEventListener("click", () => {
-        document.querySelectorAll("[data-chase-camera]").forEach(item => item.classList.toggle("active", item === button));
-        setChaseCamera(button.dataset.chaseCamera);
-    });
-});
-document.getElementById("fitLiveMap")?.addEventListener("click", () => updateLiveMap({
-    trains: appState.trainData?.trains || [],
-    stationLookup: appState.stationLookup,
-    mode: window.activeLineMode || MODE_NANKAI
-}));
-
-setLocationView(localStorage.getItem("nankaiTrackerLocationView") || "route");
 loadApp();
