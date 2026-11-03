@@ -75,6 +75,10 @@ function getStationNumber(station) {
         return "";
     }
 
+    if (rawNumber.toUpperCase().startsWith("TH")) {
+        return rawNumber.toUpperCase();
+    }
+
     return rawNumber
         .toUpperCase()
         .startsWith("NK")

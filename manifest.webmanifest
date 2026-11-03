@@ -2,7 +2,7 @@
   "id": "/nankaitracker/",
   "name": "南海トラッカー",
   "short_name": "南海トラッカー",
-  "description": "南海線・高野線・泉北線・支線の列車位置を確認できる非公式トラッカー",
+  "description": "南海線系統の在線と天竜浜名湖線の時刻表推定位置を確認できる非公式トラッカー",
   "lang": "ja",
   "start_url": "/nankaitracker/#home",
   "scope": "/nankaitracker/",

@@ -7,6 +7,10 @@ import {
     canPlaceOnSemboku,
     analyzeTrainFormation
 } from "./train-kind.js";
+import {
+    getTenhamaRouteConfig,
+    renderTenhamaTrains
+} from "./tenhama.mjs";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
@@ -20,11 +24,13 @@ const MODE_NANKAI = "nankai";
 const MODE_KOYA = "koya";
 const MODE_SEMBOKU = "semboku";
 const MODE_BRANCHES = "branches";
+const MODE_TENHAMA = "tenhama";
 const LINE_MODES = new Set([
     MODE_NANKAI,
     MODE_KOYA,
     MODE_SEMBOKU,
-    MODE_BRANCHES
+    MODE_BRANCHES,
+    MODE_TENHAMA
 ]);
 
 const appState = {
@@ -71,6 +77,10 @@ function getStations(ids) {
 }
 
 function createRouteConfig(mode) {
+    if (mode === MODE_TENHAMA) {
+        return getTenhamaRouteConfig();
+    }
+
     if (mode === MODE_NANKAI) {
         const mainIds = range(1, 42);
 
@@ -186,7 +196,7 @@ function updateLineSwitchButtons(mode) {
 }
 
 function renderMode(mode) {
-    if (!appState.trainData) {
+    if (!appState.trainData && mode !== MODE_TENHAMA) {
         return;
     }
 
@@ -216,25 +226,35 @@ function renderMode(mode) {
             routeConfig.label;
     }
 
-    showUpdateTime(
-        appState.trainData,
-        normalizedMode
-    );
-
     showRouteStations(
         routeConfig
     );
 
-    showTrains(
-        appState.trainData,
-        routeConfig.visibleStationIds,
-        {
-            lineId: routeConfig.lineId,
-            mode: normalizedMode,
-            placementAliases:
-                routeConfig.placementAliases
-        }
-    );
+    const tenhamaNotice =
+        document.getElementById("tenhamaNotice");
+    if (tenhamaNotice) {
+        tenhamaNotice.hidden = normalizedMode !== MODE_TENHAMA;
+    }
+
+    if (normalizedMode === MODE_TENHAMA) {
+        renderTenhamaTrains();
+    } else {
+        showUpdateTime(
+            appState.trainData,
+            normalizedMode
+        );
+
+        showTrains(
+            appState.trainData,
+            routeConfig.visibleStationIds,
+            {
+                lineId: routeConfig.lineId,
+                mode: normalizedMode,
+                placementAliases:
+                    routeConfig.placementAliases
+            }
+        );
+    }
 
     const detailPanel =
         document.getElementById(
@@ -381,6 +401,14 @@ async function loadApp() {
             cloudState.innerHTML = "<i></i>取得できません";
         }
         if (refreshLabel) refreshLabel.textContent = "再試行";
+
+        const requestedMode = location.hash.replace("#", "") ||
+            localStorage.getItem("nankaiTrackerLineMode");
+        if (requestedMode === MODE_TENHAMA) {
+            renderMode(MODE_TENHAMA);
+            if (refreshLabel) refreshLabel.textContent = "更新完了";
+            return true;
+        }
         return false;
     } finally {
         if (refreshButton) {
@@ -608,6 +636,12 @@ setAppView(
 );
 document.getElementById("refreshTrains")?.addEventListener(
     "click",
-    () => void loadApp()
+    () => {
+        if (window.activeLineMode === MODE_TENHAMA) {
+            renderMode(MODE_TENHAMA);
+            return;
+        }
+        void loadApp();
+    }
 );
 loadApp();

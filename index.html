@@ -9,11 +9,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="南海トラッカー">
     <meta name="format-detection" content="telephone=no">
-    <meta name="description" content="南海線・高野線・泉北線・支線の列車位置と定期外列車ログを確認できる非公式トラッカー">
+    <meta name="description" content="南海線・高野線・泉北線・支線の列車位置と、天竜浜名湖線の時刻表推定位置を確認できる非公式トラッカー">
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261031c">
+    <link rel="stylesheet" href="style.css?v=20261104a">
 </head>
 <body>
     <header class="app-header">
@@ -32,7 +32,7 @@
             <div class="home-copy">
                 <span class="eyebrow">REALTIME TRAIN LOCATION</span>
                 <h1>いま、どこを<br>走ってる？</h1>
-                <p>南海線・高野線・泉北線・支線の在線位置と、通常ダイヤにない列車の記録をまとめて確認できます。</p>
+                <p>南海線・高野線・泉北線・支線の在線位置、通常ダイヤにない列車の記録、天竜浜名湖線の時刻表推定位置をまとめて確認できます。</p>
             </div>
 
             <div class="home-tools">
@@ -75,6 +75,7 @@
                         <button id="koyaLineBtn" class="line-switch-btn" type="button" data-line-mode="koya" role="tab">高野</button>
                         <button id="sembokuLineBtn" class="line-switch-btn" type="button" data-line-mode="semboku" role="tab">泉北</button>
                         <button id="branchLineBtn" class="line-switch-btn" type="button" data-line-mode="branches" role="tab">支線</button>
+                        <button id="tenhamaLineBtn" class="line-switch-btn" type="button" data-line-mode="tenhama" role="tab">天浜</button>
                     </div>
                     <button id="refreshTrains" class="refresh-trains-btn" type="button" aria-label="列車位置を更新">
                         <span class="refresh-symbol" aria-hidden="true">↻</span>
@@ -84,6 +85,14 @@
             </div>
 
             <div class="route-legend" aria-label="凡例"><span><i class="up"></i>上り</span><span><i class="down"></i>下り</span><span>列車をタップすると詳細を表示</span></div>
+            <aside id="tenhamaNotice" class="tenhama-notice" hidden>
+                <strong>天浜線は時刻表からの推定表示です</strong>
+                <span>リアルタイムGPSではなく、遅延・運休・臨時変更は反映されません。特別車両は公式の運行予定を表示します。</span>
+                <span class="tenhama-notice-links">
+                    <a href="https://www.tenhama.co.jp/about/timetable-2/" target="_blank" rel="noopener">公式時刻表</a>
+                    <a href="https://www.tenhama.co.jp/operation-status/" target="_blank" rel="noopener">運行情報</a>
+                </span>
+            </aside>
             <div id="line" aria-live="polite"><div class="loading-card">列車位置を読み込んでいます…</div></div>
         </section>
 
@@ -112,6 +121,7 @@
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
+            <section><b>Ver 1.5.0</b><p>天竜浜名湖線を特別実装。公式時刻表による推定在線と、日別の特別車両運行予定を表示。</p></section>
             <section><b>Ver 1.4.2</b><p>ログ・編成状況をトラッカー内へ統合し、在線カードへ編成番号を追加。</p></section>
             <section><b>Ver 1.4.1</b><p>ホームと在線を画面切替式に変更。南海・高野・泉北・支線を分離し、ホーム画面アプリ表示に対応。</p></section>
             <section><b>Ver 1.4.0</b><p>スマートフォン向けデザインへ刷新。カードホーム・縦型在線表示・運用ボード型ログを統合。</p></section>
@@ -121,8 +131,8 @@
         </div>
     </dialog>
 
-    <script src="api.js?v=20261031c"></script>
-    <script src="ui.js?v=20261031c"></script>
-    <script type="module" src="script.js?v=20261031c"></script>
+    <script src="api.js?v=20261104a"></script>
+    <script src="ui.js?v=20261104a"></script>
+    <script type="module" src="script.js?v=20261104a"></script>
 </body>
 </html>
