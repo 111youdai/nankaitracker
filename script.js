@@ -9,8 +9,9 @@ import {
 } from "./train-kind.js";
 import {
     getTenhamaRouteConfig,
+    renderTenhamaFleet,
     renderTenhamaTrains
-} from "./tenhama.mjs?v=20261104g";
+} from "./tenhama.mjs?v=20261104h";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
@@ -41,6 +42,7 @@ const appState = {
     stationLookup: new Map()
 };
 let refreshLabelResetTimer = null;
+let fleetSource = "nankai";
 
 function range(start, end) {
     return Array.from(
@@ -484,6 +486,43 @@ function getModeForTrain(train) {
         : MODE_KOYA;
 }
 
+function setFleetSource(source) {
+    const normalizedSource = source === "tenhama" ? "tenhama" : "nankai";
+    const frame = document.getElementById("recordsFrame");
+    const board = document.getElementById("tenhamaFleet");
+    const title = document.getElementById("recordsTitle");
+    const badge = document.getElementById("recordsStatusBadge");
+    fleetSource = normalizedSource;
+
+    document.querySelectorAll("[data-fleet-source]").forEach(button => {
+        const active = button.dataset.fleetSource === normalizedSource;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+    });
+
+    if (normalizedSource === "tenhama") {
+        if (frame) frame.hidden = true;
+        if (board) {
+            board.hidden = false;
+            renderTenhamaFleet(board);
+        }
+        if (title) title.textContent = "天浜線 編成表";
+        if (badge) badge.textContent = "15両掲載";
+        return;
+    }
+
+    if (board) board.hidden = true;
+    if (frame) {
+        frame.hidden = false;
+        if (frame.dataset.view !== "fleet") {
+            frame.dataset.view = "fleet";
+            frame.src = `${window.TRACKER_LOG_WORKER_URL}/logs.html?embed=1#fleet`;
+        }
+    }
+    if (title) title.textContent = "編成状況";
+    if (badge) badge.textContent = "公開情報";
+}
+
 function setAppView(view, updateHistory = true) {
     const normalizedView =
         ["home", "route", "log", "fleet"].includes(view)
@@ -503,16 +542,27 @@ function setAppView(view, updateHistory = true) {
     if (recordsVisible) {
         const frame = document.getElementById("recordsFrame");
         const title = document.getElementById("recordsTitle");
-        if (title) {
-            title.textContent =
-                normalizedView === "fleet"
-                    ? "編成状況"
-                    : "定期外ログ";
-        }
-        if (frame && frame.dataset.view !== normalizedView) {
-            frame.dataset.view = normalizedView;
-            frame.src =
-                `${window.TRACKER_LOG_WORKER_URL}/logs.html?embed=1#${normalizedView}`;
+        const badge = document.getElementById("recordsStatusBadge");
+        const switcher = document.getElementById("fleetSourceSwitcher");
+        const board = document.getElementById("tenhamaFleet");
+        if (switcher) switcher.hidden = normalizedView !== "fleet";
+
+        if (normalizedView === "fleet") {
+            const defaultSource = window.activeLineMode === MODE_TENHAMA
+                ? "tenhama"
+                : "nankai";
+            setFleetSource(defaultSource || fleetSource);
+        } else {
+            if (board) board.hidden = true;
+            if (frame) {
+                frame.hidden = false;
+                if (frame.dataset.view !== "log") {
+                    frame.dataset.view = "log";
+                    frame.src = `${window.TRACKER_LOG_WORKER_URL}/logs.html?embed=1#log`;
+                }
+            }
+            if (title) title.textContent = "定期外ログ";
+            if (badge) badge.textContent = "🔒 認証が必要";
         }
     }
 
@@ -566,6 +616,10 @@ document.querySelectorAll("[data-app-view]").forEach(control => {
         event.preventDefault();
         setAppView(control.dataset.appView);
     });
+});
+
+document.querySelectorAll("[data-fleet-source]").forEach(button => {
+    button.addEventListener("click", () => setFleetSource(button.dataset.fleetSource));
 });
 
 document.getElementById("detailBackdrop")?.addEventListener(

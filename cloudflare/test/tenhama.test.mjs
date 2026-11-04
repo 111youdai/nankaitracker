@@ -5,6 +5,7 @@ import {
     TENHAMA_STATIONS,
     TENHAMA_TRIPS,
     getActiveTenhamaTrains,
+    getTenhamaFleetGroups,
     getTenhamaVehicleIcon
 } from "../../tenhama.mjs";
 
@@ -46,6 +47,17 @@ test("全車両に判別用の正面アイコンを生成する", () => {
         icons.push(icon);
     }
     assert.equal(new Set(icons).size, 15, "15車両すべてを個別の塗装で描き分ける");
+});
+
+test("天浜線の編成表を3形式15両で構成する", () => {
+    const groups = getTenhamaFleetGroups();
+    const vehicles = groups.flatMap(group => group.vehicles);
+
+    assert.deepEqual(groups.map(group => group.label), ["TH2100形", "TH9200形", "THG100形"]);
+    assert.equal(groups[0].vehicles.length, 13);
+    assert.equal(vehicles.length, 15);
+    assert.equal(new Set(vehicles.map(vehicle => vehicle.vehicleId)).size, 15);
+    assert.ok(vehicles.some(vehicle => vehicle.vehicleId === "THG101"));
 });
 
 test("全列車の推定時刻が進行方向に単調増加する", () => {

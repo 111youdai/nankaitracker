@@ -299,6 +299,78 @@ export function getTenhamaVehicleIcon(vehicleId, size = "card") {
     return getTh2100Icon(vehicleId || "TH2114", theme, label, size);
 }
 
+export function getTenhamaFleetGroups() {
+    const vehicles = Object.entries(TENHAMA_VEHICLES).map(([vehicleId, vehicleName]) => ({
+        vehicleId,
+        vehicleName
+    }));
+    const byNumber = (a, b) => a.vehicleId.localeCompare(b.vehicleId, "ja", { numeric: true });
+
+    return [
+        {
+            id: "th2100",
+            label: "TH2100形",
+            description: "天浜線の主力となる普通形気動車",
+            vehicles: vehicles.filter(vehicle => /^TH21\d{2}$/.test(vehicle.vehicleId)).sort(byNumber)
+        },
+        {
+            id: "th9200",
+            label: "TH9200形",
+            description: "観光列車 New スローライフトレイン",
+            vehicles: vehicles.filter(vehicle => /^TH92\d{2}$/.test(vehicle.vehicleId)).sort(byNumber)
+        },
+        {
+            id: "thg100",
+            label: "THG100形",
+            description: "電気式気動車 Green DEC",
+            vehicles: vehicles.filter(vehicle => /^THG\d{3}$/.test(vehicle.vehicleId)).sort(byNumber)
+        }
+    ];
+}
+
+export function renderTenhamaFleet(container) {
+    if (!container) return [];
+
+    const groups = getTenhamaFleetGroups();
+    const total = groups.reduce((sum, group) => sum + group.vehicles.length, 0);
+    container.innerHTML = `
+        <section class="tenhama-fleet-intro">
+            <div>
+                <span class="eyebrow">TENHAMA FLEET</span>
+                <h3>天竜浜名湖線 編成表</h3>
+                <p>現在掲載している${total}両を、形式と愛称・塗装ごとに一覧表示しています。</p>
+            </div>
+            <span class="tenhama-fleet-total">全${total}両</span>
+        </section>
+        ${groups.map(group => `
+            <section class="tenhama-fleet-group" data-fleet-group="${escapeHtml(group.id)}">
+                <header class="tenhama-fleet-group-head">
+                    <div>
+                        <h3>${escapeHtml(group.label)}</h3>
+                        <p>${escapeHtml(group.description)}</p>
+                    </div>
+                    <span>${group.vehicles.length}両</span>
+                </header>
+                <div class="tenhama-fleet-grid">
+                    ${group.vehicles.map(vehicle => `
+                        <article class="tenhama-fleet-card">
+                            <div class="tenhama-fleet-icon">${getTenhamaVehicleIcon(vehicle.vehicleId, "detail")}</div>
+                            <div class="tenhama-fleet-card-copy">
+                                <strong>${escapeHtml(vehicle.vehicleId)}</strong>
+                                <span>${escapeHtml(vehicle.vehicleName)}</span>
+                                <small>1両編成</small>
+                            </div>
+                        </article>
+                    `).join("")}
+                </div>
+            </section>
+        `).join("")}
+        <p class="tenhama-fleet-note">車両の愛称・塗装は掲載データに基づく一覧です。在線位置は時刻表からの推定表示で、実際の車両変更が反映されない場合があります。</p>
+    `;
+
+    return groups;
+}
+
 function getPosition(trip, currentMinute) {
     const stops = trip.stops;
     let currentIndex = 0;
