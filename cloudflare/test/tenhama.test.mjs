@@ -47,6 +47,8 @@ test("全車両に判別用の正面アイコンを生成する", () => {
         icons.push(icon);
     }
     assert.equal(new Set(icons).size, 15, "15車両すべてを個別の塗装で描き分ける");
+    assert.match(getTenhamaVehicleIcon("THG101"), /data-model="thg100"/);
+    assert.doesNotMatch(getTenhamaVehicleIcon("THG101"), /c18 8 23-3/);
 });
 
 test("天浜線の編成表を3形式15両で構成する", () => {

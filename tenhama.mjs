@@ -271,24 +271,52 @@ function getTh2100Icon(vehicleId, theme, label, size) {
 function getThg101Icon(label, size) {
     const id = `thg-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
     return `
-        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
-            <defs><linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#334b58"/><stop offset=".55" stop-color="#081318"/><stop offset="1" stop-color="#1b3039"/></linearGradient></defs>
-            <g transform="scale(1 .84)">
-            <ellipse cx="48" cy="119" rx="35" ry="6" fill="rgba(0,0,0,.38)"/>
-            <g stroke="#20282c" stroke-linecap="round"><path d="M35 105v15M61 105v15" stroke-width="5"/><path d="M28 119h40" stroke-width="5"/><path d="M44 108v13M52 108v13" stroke-width="2"/></g>
-            <path d="M17 20Q48 5 79 20L83 99Q82 110 70 114H26Q14 110 13 99z" fill="#eef3f1" stroke="#66787d" stroke-width="2.4"/>
-            <path d="M20 17Q48 5 76 17l-4 7H24z" fill="#768589"/>
-            <rect x="31" y="14" width="34" height="11" rx="2" fill="#0b171c"/><text x="48" y="21" text-anchor="middle" font-size="5.5" font-weight="800" fill="#ff9a3b">掛川</text>
-            <path d="M18 29h60v42Q77 76 71 78H25Q19 76 18 71z" fill="url(#thg-glass-${id})" stroke="#50636b" stroke-width="1.6"/>
-            <path d="M48 29v48" stroke="#81949a" stroke-width="2"/><path d="M21 68l16-14M75 68L59 54" stroke="#a9bec5" stroke-width="1.7"/>
-            <circle cx="22" cy="23" r="4.8" fill="#fff3a6" stroke="#8d7736"/><circle cx="74" cy="23" r="4.8" fill="#fff3a6" stroke="#8d7736"/>
-            <path d="M14 79h68v27H14z" fill="#eef3f1"/><path d="M14 84c18 8 23-3 34 3s20 6 34-2" fill="none" stroke="#ef7c2d" stroke-width="4"/>
-            <path d="M14 91c16 7 24-4 35 2s20 6 33-2" fill="none" stroke="#15996f" stroke-width="4"/>
-            <path d="M14 98c17 7 25-4 36 2s19 5 32-2" fill="none" stroke="#237eb5" stroke-width="4"/>
-            <path d="M42 76h12v28H42z" fill="#f5f7f5" stroke="#79898d" stroke-width="1.2"/><rect x="44" y="79" width="8" height="12" fill="#223740"/><text x="48" y="100" text-anchor="middle" font-size="4.5" font-weight="900" fill="#187eaa">GreenDEC</text>
-            <rect x="28" y="104" width="40" height="9" rx="2" fill="#253136"/><rect x="37" y="106" width="22" height="6" rx="1" fill="#bbc3c4"/><text x="48" y="111" text-anchor="middle" font-size="4.2" font-weight="800" fill="#293236">THG101</text>
-            <path d="M26 107v9M70 107v9M31 113l-5 6M65 113l5 6" stroke="#252e31" stroke-width="2"/><rect x="44" y="112" width="8" height="8" rx="1" fill="#1b2427"/>
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" data-model="thg100" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+            <defs>
+                <linearGradient id="thg-body-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f5f7f5"/><stop offset=".72" stop-color="#e5e9e7"/><stop offset="1" stop-color="#cbd2d0"/></linearGradient>
+                <linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#243943"/><stop offset=".55" stop-color="#081318"/><stop offset="1" stop-color="#13262e"/></linearGradient>
+                <linearGradient id="thg-lamp-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffbd2"/><stop offset="1" stop-color="#ffd861"/></linearGradient>
+            </defs>
+            <ellipse cx="48" cy="103" rx="34" ry="4.5" fill="rgba(0,0,0,.42)"/>
+
+            <path d="M16 14Q48 4 80 14L84 86Q84 94 77 98H19Q12 94 12 86z" fill="url(#thg-body-${id})" stroke="#607176" stroke-width="2"/>
+            <path d="M18 13Q48 4 78 13l-3.5 7h-53z" fill="#a9b4b6" stroke="#69787b" stroke-width="1"/>
+            <path d="M16 21h64l2 49H14z" fill="#111d22" stroke="#53656c" stroke-width="1.3"/>
+
+            <rect x="34" y="14" width="28" height="10" rx="1.6" fill="#071115" stroke="#64767b" stroke-width="1"/>
+            <text x="48" y="20.8" text-anchor="middle" font-size="5.4" font-weight="900" fill="#ff9c42">掛川</text>
+
+            <g fill="#3f4b4f" stroke="#76858a" stroke-width=".65">
+                <rect x="18" y="26" width="18" height="10" rx="1.5"/><rect x="60" y="26" width="18" height="10" rx="1.5"/>
             </g>
+            <g fill="url(#thg-lamp-${id})" stroke="#9b8440" stroke-width=".55">
+                <rect x="19.5" y="27.5" width="6.5" height="7" rx="1"/><rect x="27.5" y="27.5" width="6.5" height="7" rx="1"/>
+                <rect x="61.5" y="27.5" width="6.5" height="7" rx="1"/><rect x="69.5" y="27.5" width="6.5" height="7" rx="1"/>
+            </g>
+
+            <path d="M17 38h21v29H17zM58 38h21v29H58z" fill="url(#thg-glass-${id})" stroke="#566b72" stroke-width="1.2"/>
+            <path d="M19 65l14-13M77 65L63 52" stroke="#a8bbc1" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M21 62l10-9M75 62l-10-9" stroke="#53666d" stroke-width=".7"/>
+
+            <path d="M38.5 26h19v58h-19z" fill="#dfe5e3" stroke="#78888c" stroke-width="1.4"/>
+            <rect x="41" y="32" width="14" height="26" rx="1.7" fill="url(#thg-glass-${id})" stroke="#657a81" stroke-width="1"/>
+            <path d="M42.2 34h11.6M42.2 56h11.6" stroke="#42565d" stroke-width=".7"/>
+            <rect x="46.6" y="62" width="2.8" height="11" rx=".7" fill="#8d999b"/>
+
+            <g fill="#c62d35" stroke="#631d23" stroke-width=".5"><circle cx="20" cy="72" r="2.7"/><circle cx="76" cy="72" r="2.7"/></g>
+            <path d="M13 75h25.5v4H13zM57.5 75H83v4H57.5z" fill="#f28a2f"/>
+            <path d="M13 80h25.5v4H13zM57.5 80H83v4H57.5z" fill="#1a9e70"/>
+            <path d="M13 85h25.5v4H13zM57.5 85H83v4H57.5z" fill="#287fb4"/>
+            <path d="M38.5 75h19v14h-19z" fill="#e2e7e5" stroke="#78888c" stroke-width="1"/>
+            <text x="48" y="83.7" text-anchor="middle" font-size="4" font-weight="900" fill="#258166">THR</text>
+            <text x="69" y="93" text-anchor="middle" font-size="3.5" font-weight="900" fill="#475255">THG101</text>
+
+            <g fill="#78868a" stroke="#3e494d" stroke-width=".8"><path d="M17 91h10v11H17zM69 91h10v11H69z"/><path d="M29 92h8v10h-8zM59 92h8v10h-8z"/></g>
+            <path d="M16 97h64v5H16z" fill="#5d696d" stroke="#333d40" stroke-width="1"/>
+            <g fill="#414c50" stroke="#1f292c" stroke-width="1"><rect x="41" y="91" width="14" height="9" rx="1.5"/><path d="M44 99h8v6h-8z"/><path d="M37 104h22v3H37z"/></g>
+            <path d="M40 95c-8 3-7 8-12 10M56 95c8 3 7 8 12 10" fill="none" stroke="#20282b" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M33 91v11M63 91v11" stroke="#2b3437" stroke-width="2.4"/>
+            <rect x="43" y="87" width="10" height="3" rx=".6" fill="#5d696d"/>
         </svg>`;
 }
 
