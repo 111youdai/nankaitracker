@@ -10,7 +10,7 @@ import {
 import {
     getTenhamaRouteConfig,
     renderTenhamaTrains
-} from "./tenhama.mjs?v=20261104f";
+} from "./tenhama.mjs?v=20261104g";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;

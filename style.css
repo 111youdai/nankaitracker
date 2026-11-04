@@ -450,7 +450,21 @@ a { color: inherit; text-decoration: none; }
 .train-formation-source { margin-top: 2px; color: var(--teal); font-size: 7px; font-weight: 800; }
 .formation-source-note { color: #a8dad1; font-size: 11px; }
 .train.tenhama-train {
-    padding: 6px 6px 7px;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+        "badge badge"
+        "icon kind"
+        "icon number"
+        "icon cars"
+        "icon formation"
+        "name name";
+    align-items: center;
+    min-width: 116px;
+    max-width: 128px;
+    padding: 5px 6px 6px;
+    column-gap: 5px;
+    row-gap: 0;
     border-color: rgba(72, 211, 188, .34);
     background: linear-gradient(145deg, #164d50, #123440);
 }
@@ -460,9 +474,10 @@ a { color: inherit; text-decoration: none; }
     box-shadow: 0 0 0 2px rgba(255, 207, 103, .14), 0 8px 24px rgba(24, 8, 35, .5);
 }
 .tenhama-vehicle-icon {
+    grid-area: icon;
     display: block;
-    width: 52px;
-    height: 58px;
+    width: 44px;
+    height: 50px;
     margin: 0 auto;
     filter: drop-shadow(0 5px 5px rgba(0,0,0,.38));
 }
@@ -480,6 +495,7 @@ a { color: inherit; text-decoration: none; }
 }
 .tenhama-detail-title h2 { margin: 0 !important; }
 .tenhama-special-badge {
+    grid-area: badge;
     width: max-content;
     margin: -2px auto 2px;
     padding: 2px 5px;
@@ -490,6 +506,7 @@ a { color: inherit; text-decoration: none; }
     font-weight: 1000;
 }
 .tenhama-vehicle-name {
+    grid-area: name;
     overflow: hidden;
     margin-top: 2px;
     color: #f7dfad;
@@ -498,6 +515,10 @@ a { color: inherit; text-decoration: none; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.tenhama-train .train-kind { grid-area: kind; }
+.tenhama-train .train-number { grid-area: number; line-height: 1; }
+.tenhama-train .train-cars { grid-area: cars; }
+.tenhama-train .train-formation { grid-area: formation; margin-top: 1px; }
 .tenhama-detail-status {
     display: grid;
     gap: 4px;
@@ -676,7 +697,8 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .station-name { max-width: 94px; font-size: 12px; }
     .station-number { font-size: 8px; }
     .train { min-width: 72px; max-width: 104px; padding: 7px 5px; }
-    .tenhama-vehicle-icon { width: 48px; height: 54px; }
+    .train.tenhama-train { min-width: 112px; max-width: 120px; padding: 5px; grid-template-columns: 42px minmax(0, 1fr); }
+    .tenhama-vehicle-icon { width: 42px; height: 47px; }
     .train-number { font-size: 15px; }
     #detailPanel {
         top: auto;
