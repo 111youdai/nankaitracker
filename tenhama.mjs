@@ -194,29 +194,75 @@ function getDetailedLivery(vehicleId, type) {
 
 function getTh2100Icon(vehicleId, theme, label, size) {
     const id = `${label}-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
+    const doorColors = {
+        re: "#f0d991",
+        kiha: "#ead9b6",
+        catalyzer: "#f7faf7",
+        standard: "#f5f7f5",
+        una: "#f5f7f5",
+        flower: "#17482f",
+        bike: "#75c4df",
+        yurucamp: "#287a55",
+        bee: "#f8e46a",
+        eva: "#30205f",
+        wave: "#158ac7",
+        katana: "#111b30",
+        slow: "#243c4d"
+    };
+    const doorColor = doorColors[theme.type] || theme.base;
+    const doorMark = {
+        re: '<text x="48" y="88" text-anchor="middle" font-size="5.2" font-weight="900" fill="#175c35">Re+</text>',
+        kiha: `<text x="48" y="90" text-anchor="middle" font-size="4.1" font-weight="900" fill="#3b3329">${escapeHtml(vehicleId)}</text>`,
+        catalyzer: '<circle cx="48" cy="84" r="6.3" fill="#fff" stroke="#e23845" stroke-width="1.2"/><text x="48" y="83" text-anchor="middle" font-size="3.4" font-weight="900" fill="#008c82">地元</text><text x="48" y="87" text-anchor="middle" font-size="3.2" font-weight="900" fill="#e23845">LOVE</text>',
+        standard: '<text x="48" y="89" text-anchor="middle" font-size="4.5" font-weight="900" fill="#1880bd">THR</text>',
+        una: '<circle cx="48" cy="84" r="6.5" fill="#f8f8f3" stroke="#ef78b2" stroke-width="1.2"/><text x="48" y="86" text-anchor="middle" font-size="4" font-weight="900" fill="#1680bf">音街</text>',
+        flower: '<circle cx="48" cy="84" r="6.5" fill="#f6f4dc" stroke="#dfbe72" stroke-width="1.1"/><path d="M43 85c5-8 9-3 10 0-3 4-7 5-10 0z" fill="#dc6e85"/>',
+        bike: '<circle cx="48" cy="84" r="6.5" fill="#f7fbfb" stroke="#235e7f" stroke-width="1.1"/><path d="M45 84l3-4 3 4-3 4z" fill="#235e7f"/>',
+        yurucamp: '<path d="M42 88l6-11 6 11z" fill="#fff4cf" stroke="#397947" stroke-width="1.1"/><path d="M45 88l3-5 3 5z" fill="#e99343"/>',
+        bee: '<g transform="translate(48 84)"><ellipse rx="6" ry="4" fill="#2d2a22"/><path d="M-3.5-3v6M0-4v8M3.5-3v6" stroke="#f6d53e" stroke-width="1.5"/></g>',
+        eva: '<path d="M42 87l6-9 6 9-3-1-3 4-3-4z" fill="#171326" stroke="#f0aa31" stroke-width="1.2"/>',
+        wave: '<text x="48" y="88" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">C</text>',
+        katana: '<path d="M43 90l10-15" stroke="#f0f2f4" stroke-width="3"/><path d="M42 86l6 5" stroke="#d92332" stroke-width="2.2"/><text x="49" y="89" text-anchor="middle" font-size="4.4" font-weight="900" fill="#fff">刀</text>',
+        slow: '<text x="48" y="88" text-anchor="middle" font-size="4" font-weight="900" fill="#c8b27a">THR</text>'
+    }[theme.type] || "";
     return `
         <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 128" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
             <defs>
-                <clipPath id="body-${id}"><path d="M20 17Q48 3 76 17L82 99Q81 110 70 114H26Q15 110 14 99z"/></clipPath>
+                <clipPath id="body-${id}"><path d="M13 25Q13 15 23 11Q48 3 73 11Q83 15 83 25V96Q83 101 77 103H19Q13 101 13 96z"/></clipPath>
                 <linearGradient id="glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#253944"/><stop offset=".6" stop-color="#071117"/><stop offset="1" stop-color="#17272f"/></linearGradient>
+                <linearGradient id="lamp-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffde1"/><stop offset="1" stop-color="#e9d98d"/></linearGradient>
             </defs>
-            <ellipse cx="48" cy="119" rx="34" ry="6" fill="rgba(0,0,0,.38)"/>
-            <g stroke="#21282c" stroke-linecap="round"><path d="M35 105v15M61 105v15" stroke-width="5"/><path d="M29 119h38" stroke-width="5"/><path d="M44 107v15M52 107v15" stroke-width="2"/></g>
-            <g fill="#91a0a5" stroke="#536166" stroke-width="1"><path d="M7 38h9v30H9Q6 66 6 62V42q0-3 1-4z"/><path d="M89 38h-9v30h7q3-2 3-6V42q0-3-1-4z"/></g>
-            <path d="M20 17Q48 3 76 17L82 99Q81 110 70 114H26Q15 110 14 99z" fill="${theme.base}" stroke="#6f7d80" stroke-width="2.4"/>
+            <ellipse cx="48" cy="121" rx="35" ry="5" fill="rgba(0,0,0,.38)"/>
+            <g fill="#8c999e" stroke="#4e595d" stroke-width="1"><path d="M7 42h7v27H9Q6 67 6 63V46q0-3 1-4z"/><path d="M89 42h-7v27h5q3-2 3-6V46q0-3-1-4z"/><path d="M13 48H8M83 48h5" fill="none"/></g>
+            <path d="M13 25Q13 15 23 11Q48 3 73 11Q83 15 83 25V96Q83 101 77 103H19Q13 101 13 96z" fill="${theme.base}" stroke="#6f7d80" stroke-width="2"/>
             <g clip-path="url(#body-${id})">${getDetailedLivery(vehicleId, theme.type)}</g>
-            <path d="M22 14Q48 3 74 14l-3 7H25z" fill="#68777b"/><path d="M26 12Q48 5 70 12" fill="none" stroke="#b8c1c2" stroke-width="2"/>
-            <rect x="36" y="14" width="24" height="11" rx="2" fill="#182328" stroke="#9eabad" stroke-width="1"/>
-            <text x="48" y="21.5" text-anchor="middle" font-size="5.4" font-weight="800" fill="#7ee3b5">${escapeHtml(theme.destination)}</text>
-            <g><rect x="20" y="28" width="22" height="43" rx="3" fill="url(#glass-${id})" stroke="#53656c" stroke-width="1.4"/><rect x="54" y="28" width="22" height="43" rx="3" fill="url(#glass-${id})" stroke="#53656c" stroke-width="1.4"/>
-                <path d="M22 66l13-12M74 66L61 54" stroke="#a9bbc0" stroke-width="1.5"/><path d="M22 31h18M56 31h18" stroke="#425861" stroke-width="1"/></g>
-            <path d="M42 25h12v70H42z" fill="none" stroke="#65757b" stroke-width="1.5"/><rect x="44" y="31" width="8" height="30" rx="1.5" fill="#122129" stroke="#778b92" stroke-width="1"/>
-            <path d="M44 33h8M44 59h8" stroke="#3b515a" stroke-width="1"/><path d="M47 65h2v12h-2z" fill="#909da1"/>
-            <g><circle cx="23" cy="21" r="5.1" fill="#efe8b4" stroke="#76652e" stroke-width="1.2"/><circle cx="23" cy="21" r="2.7" fill="#fff9ca"/><circle cx="73" cy="21" r="5.1" fill="#efe8b4" stroke="#76652e" stroke-width="1.2"/><circle cx="73" cy="21" r="2.7" fill="#fff9ca"/></g>
-            <g fill="#cf3140" stroke="#5f2429" stroke-width=".8"><circle cx="21" cy="76" r="2.4"/><circle cx="75" cy="76" r="2.4"/></g>
-            <path d="M18 103h60" stroke="#5d696d" stroke-width="2"/><rect x="28" y="104" width="40" height="9" rx="2" fill="#263136" stroke="#7e898c" stroke-width="1.2"/>
-            <rect x="37" y="106" width="22" height="6" rx="1" fill="#bbc3c4"/><text x="48" y="111" text-anchor="middle" font-size="4.3" font-weight="800" fill="#293236">${escapeHtml(vehicleId)}</text>
-            <path d="M26 107v9M70 107v9M31 113l-5 6M65 113l5 6" stroke="#262e31" stroke-width="2"/><rect x="44" y="112" width="8" height="8" rx="1" fill="#1c2427"/>
+            <path d="M22 11Q48 3 74 11" fill="none" stroke="#c2cacc" stroke-width="1.7"/>
+            <rect x="35" y="14" width="26" height="11" rx="1.5" fill="#182328" stroke="#88979a" stroke-width="1"/>
+            <text x="48" y="21.5" text-anchor="middle" font-size="5.2" font-weight="800" fill="#ff8b3d">${escapeHtml(theme.destination)}</text>
+            <path d="M17 30Q17 25 22 24H36Q39 24 39 28V70Q39 76 34 77H23Q17 76 17 70z" fill="url(#glass-${id})" stroke="#4f6067" stroke-width="1.35"/>
+            <path d="M57 28Q57 24 60 24H74Q79 25 79 30V70Q79 76 73 77H62Q57 76 57 70z" fill="url(#glass-${id})" stroke="#4f6067" stroke-width="1.35"/>
+            <g fill="#4b5356" stroke="#899397" stroke-width=".65">
+                <rect x="20" y="27" width="16" height="10" rx="1.3"/><rect x="60" y="27" width="16" height="10" rx="1.3"/>
+            </g>
+            <g fill="url(#lamp-${id})" stroke="#958348" stroke-width=".55">
+                <rect x="21.3" y="28.3" width="6.1" height="7.4" rx="1"/><rect x="28.6" y="28.3" width="6.1" height="7.4" rx="1"/>
+                <rect x="61.3" y="28.3" width="6.1" height="7.4" rx="1"/><rect x="68.6" y="28.3" width="6.1" height="7.4" rx="1"/>
+            </g>
+            <path d="M19.5 71l14-14M76.5 71l-14-14" stroke="#b0c0c4" stroke-width="1.4"/>
+            <path d="M37 28h22v68H37z" fill="${doorColor}" stroke="#65757b" stroke-width="1.5"/>
+            <rect x="40" y="36" width="16" height="32" rx="2" fill="#122129" stroke="#778b92" stroke-width="1.1"/>
+            <path d="M41.5 38h13M41.5 66h13" stroke="#3b515a" stroke-width=".85"/>
+            <path d="M38.5 31v61M57.5 31v61" stroke="#b8c1c2" stroke-width=".55" stroke-dasharray="1.2 2.6"/>
+            <path d="M53.5 72h1.8v8h-1.8z" fill="#747f82"/>
+            ${doorMark}
+            <g fill="#7e252c" stroke="#3f1d21" stroke-width=".55"><rect x="18" y="81" width="7" height="2.8" rx="1.2"/><rect x="71" y="81" width="7" height="2.8" rx="1.2"/></g>
+            <path d="M18 91h12M66 91h12" stroke="#5c6669" stroke-width="2.2" stroke-linecap="round"/>
+            <text x="69" y="87.5" text-anchor="middle" font-size="3.4" font-weight="800" fill="#30393c">${escapeHtml(vehicleId)}</text>
+            <g fill="#89969a" stroke="#4a5559" stroke-width=".8"><path d="M18 101h8v16h-8zM70 101h8v16h-8z"/><path d="M28 102h8v15h-8zM60 102h8v15h-8z"/></g>
+            <path d="M18 112h60v5H18z" fill="#68767a" stroke="#3e484c" stroke-width="1"/>
+            <path d="M34 102v14M62 102v14" stroke="#252d30" stroke-width="3"/>
+            <g fill="#525d61" stroke="#252d30" stroke-width="1"><rect x="40" y="104" width="16" height="10" rx="1.5"/><path d="M43 113h10v8H43z"/><path d="M38 119h20v4H38z"/></g>
+            <path d="M39 107c-8 4-8 12-13 13M57 107c8 4 8 12 13 13" fill="none" stroke="#202729" stroke-width="1.5"/>
         </svg>`;
 }
 
