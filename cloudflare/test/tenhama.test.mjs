@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import {
     TENHAMA_STATIONS,
     TENHAMA_TRIPS,
-    getActiveTenhamaTrains
+    getActiveTenhamaTrains,
+    getTenhamaVehicleIcon
 } from "../../tenhama.mjs";
 
 test("天竜浜名湖線の39駅と81列車を収録している", () => {
@@ -29,6 +30,18 @@ test("公式予定から503列車の特別車両を照合する", () => {
 test("深夜帯は在線列車を表示しない", () => {
     const at = new Date("2026-11-02T17:00:00.000Z");
     assert.equal(getActiveTenhamaTrains(at).length, 0);
+});
+
+test("全車両に判別用の正面アイコンを生成する", () => {
+    for (const vehicleId of [
+        "THG101", "TH2101", "TH2102", "TH2103", "TH2104",
+        "TH2105", "TH2107", "TH2108", "TH2109", "TH2110",
+        "TH2111", "TH2112", "TH2113", "TH2114", "TH9200"
+    ]) {
+        const icon = getTenhamaVehicleIcon(vehicleId);
+        assert.match(icon, /<svg/);
+        assert.match(icon, new RegExp(vehicleId));
+    }
 });
 
 test("全列車の推定時刻が進行方向に単調増加する", () => {

@@ -458,6 +458,26 @@ a { color: inherit; text-decoration: none; }
     background: linear-gradient(145deg, #7b2f65, #35305f);
     box-shadow: 0 0 0 2px rgba(255, 207, 103, .14), 0 8px 24px rgba(24, 8, 35, .5);
 }
+.tenhama-vehicle-icon {
+    display: block;
+    width: 42px;
+    height: 54px;
+    margin: 3px auto 2px;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,.32));
+}
+.tenhama-vehicle-icon.detail {
+    flex: 0 0 auto;
+    width: 58px;
+    height: 74px;
+    margin: 0;
+}
+.tenhama-detail-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.tenhama-detail-title h2 { margin: 0 !important; }
 .tenhama-special-badge {
     width: max-content;
     margin: -3px auto 3px;
@@ -655,6 +675,7 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .station-name { max-width: 94px; font-size: 12px; }
     .station-number { font-size: 8px; }
     .train { min-width: 72px; max-width: 104px; padding: 7px 5px; }
+    .tenhama-vehicle-icon { width: 38px; height: 49px; }
     .train-number { font-size: 15px; }
     #detailPanel {
         top: auto;
