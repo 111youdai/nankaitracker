@@ -11,7 +11,7 @@ import {
     getTenhamaRouteConfig,
     renderTenhamaFleet,
     renderTenhamaTrains
-} from "./tenhama.mjs?v=20261104h";
+} from "./tenhama.mjs?v=20261104i";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
@@ -548,7 +548,9 @@ function setAppView(view, updateHistory = true) {
         if (switcher) switcher.hidden = normalizedView !== "fleet";
 
         if (normalizedView === "fleet") {
-            const defaultSource = window.activeLineMode === MODE_TENHAMA
+            const preferredMode = window.activeLineMode ||
+                localStorage.getItem("nankaiTrackerLineMode");
+            const defaultSource = preferredMode === MODE_TENHAMA
                 ? "tenhama"
                 : "nankai";
             setFleetSource(defaultSource || fleetSource);
