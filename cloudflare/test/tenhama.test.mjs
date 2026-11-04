@@ -42,12 +42,14 @@ test("全車両に判別用の正面アイコンを生成する", () => {
     ]) {
         const icon = getTenhamaVehicleIcon(vehicleId);
         assert.match(icon, /<svg/);
-        assert.match(icon, /viewBox="0 0 96 108"/);
+        assert.match(icon, /viewBox="0 0 \d+ \d+"/);
         assert.match(icon, new RegExp(vehicleId));
         icons.push(icon);
     }
     assert.equal(new Set(icons).size, 15, "15車両すべてを個別の塗装で描き分ける");
     assert.match(getTenhamaVehicleIcon("THG101"), /data-model="thg100"/);
+    assert.match(getTenhamaVehicleIcon("THG101"), /viewBox="0 0 100 112"/);
+    assert.match(getTenhamaVehicleIcon("THG101"), />THG101<\/text>/);
     assert.doesNotMatch(getTenhamaVehicleIcon("THG101"), /c18 8 23-3/);
 });
 

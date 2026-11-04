@@ -271,52 +271,55 @@ function getTh2100Icon(vehicleId, theme, label, size) {
 function getThg101Icon(label, size) {
     const id = `thg-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
     return `
-        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" data-model="thg100" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" data-model="thg100" viewBox="0 0 100 112" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
             <defs>
-                <linearGradient id="thg-body-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f5f7f5"/><stop offset=".72" stop-color="#e5e9e7"/><stop offset="1" stop-color="#cbd2d0"/></linearGradient>
-                <linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#243943"/><stop offset=".55" stop-color="#081318"/><stop offset="1" stop-color="#13262e"/></linearGradient>
-                <linearGradient id="thg-lamp-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffbd2"/><stop offset="1" stop-color="#ffd861"/></linearGradient>
+                <linearGradient id="thg-body-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d7dddc"/><stop offset=".55" stop-color="#f0f1ee"/><stop offset="1" stop-color="#aeb8b8"/></linearGradient>
+                <linearGradient id="thg-mask-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#1c2427"/><stop offset=".55" stop-color="#080d0f"/><stop offset="1" stop-color="#151b1d"/></linearGradient>
+                <linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#27383d"/><stop offset=".45" stop-color="#071013"/><stop offset="1" stop-color="#11191c"/></linearGradient>
+                <filter id="thg-led-${id}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation=".65" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
-            <ellipse cx="48" cy="103" rx="34" ry="4.5" fill="rgba(0,0,0,.42)"/>
+            <ellipse cx="50" cy="107" rx="36" ry="4.2" fill="rgba(0,0,0,.48)"/>
 
-            <path d="M16 14Q48 4 80 14L84 86Q84 94 77 98H19Q12 94 12 86z" fill="url(#thg-body-${id})" stroke="#607176" stroke-width="2"/>
-            <path d="M18 13Q48 4 78 13l-3.5 7h-53z" fill="#a9b4b6" stroke="#69787b" stroke-width="1"/>
-            <path d="M16 21h64l2 49H14z" fill="#111d22" stroke="#53656c" stroke-width="1.3"/>
+            <!-- Smooth stainless body and the full-width black mask seen on THG101 -->
+            <path d="M13 91V25Q13 9 50 5Q87 9 87 25v66q0 9-9 13H22q-9-4-9-13z" fill="url(#thg-body-${id})" stroke="#647277" stroke-width="2"/>
+            <path d="M15 25Q15 12 50 8Q85 12 85 25v54Q76 86 70 93H30Q24 86 15 79z" fill="url(#thg-mask-${id})" stroke="#28363a" stroke-width="1.2"/>
+            <path d="M17 22Q25 12 50 10Q75 12 83 22" fill="none" stroke="#f5f6f3" stroke-width="1.1" opacity=".8"/>
 
-            <rect x="34" y="14" width="28" height="10" rx="1.6" fill="#071115" stroke="#64767b" stroke-width="1"/>
-            <text x="48" y="20.8" text-anchor="middle" font-size="5.4" font-weight="900" fill="#ff9c42">掛川</text>
-
-            <g fill="#3f4b4f" stroke="#76858a" stroke-width=".65">
-                <rect x="18" y="26" width="18" height="10" rx="1.5"/><rect x="60" y="26" width="18" height="10" rx="1.5"/>
+            <!-- Destination display, car number and compact LED light arrays -->
+            <rect x="37" y="14" width="26" height="10" rx="1.2" fill="#263c35" stroke="#6c7d78" stroke-width=".8"/>
+            <text x="50" y="19.2" text-anchor="middle" font-size="4.5" font-weight="900" fill="#e9eee3">掛川</text>
+            <text x="50" y="22.2" text-anchor="middle" font-size="1.8" font-weight="700" fill="#c8d6ca">KAKEGAWA</text>
+            <text x="72" y="20.2" text-anchor="middle" font-size="4.2" font-weight="900" fill="#f4f2fa">THG101</text>
+            <g filter="url(#thg-led-${id})" fill="#f6eaff">
+                <g transform="translate(21 27)"><circle cx="0" cy="0" r="1"/><circle cx="3" cy="0" r="1"/><circle cx="6" cy="0" r="1"/><circle cx="9" cy="0" r="1"/><circle cx="0" cy="3" r="1"/><circle cx="3" cy="3" r="1"/><circle cx="6" cy="3" r="1"/><circle cx="9" cy="3" r="1"/></g>
+                <g transform="translate(70 27)"><circle cx="0" cy="0" r="1"/><circle cx="3" cy="0" r="1"/><circle cx="6" cy="0" r="1"/><circle cx="9" cy="0" r="1"/><circle cx="0" cy="3" r="1"/><circle cx="3" cy="3" r="1"/><circle cx="6" cy="3" r="1"/><circle cx="9" cy="3" r="1"/></g>
             </g>
-            <g fill="url(#thg-lamp-${id})" stroke="#9b8440" stroke-width=".55">
-                <rect x="19.5" y="27.5" width="6.5" height="7" rx="1"/><rect x="27.5" y="27.5" width="6.5" height="7" rx="1"/>
-                <rect x="61.5" y="27.5" width="6.5" height="7" rx="1"/><rect x="69.5" y="27.5" width="6.5" height="7" rx="1"/>
-            </g>
 
-            <path d="M17 38h21v29H17zM58 38h21v29H58z" fill="url(#thg-glass-${id})" stroke="#566b72" stroke-width="1.2"/>
-            <path d="M19 65l14-13M77 65L63 52" stroke="#a8bbc1" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M21 62l10-9M75 62l-10-9" stroke="#53666d" stroke-width=".7"/>
+            <!-- Large windscreens and the black gangway door -->
+            <path d="M17 34h22v34H17q-2-4-2-9V40q0-4 2-6zM61 34h22q2 2 2 6v19q0 5-2 9H61z" fill="url(#thg-glass-${id})" stroke="#39494e" stroke-width="1.2"/>
+            <path d="M39 25h22v59q0 6-4 9H43q-4-3-4-9z" fill="#090e10" stroke="#4d5c60" stroke-width="1.2"/>
+            <rect x="43" y="35" width="14" height="27" rx="1.5" fill="#162328" stroke="#6f7d80" stroke-width="1"/>
+            <path d="M44.5 37h11M44.5 60h11" stroke="#334449" stroke-width=".7"/>
+            <path d="M35 61L20 72M65 61l15 11" stroke="#aebdc0" stroke-width="1.35" stroke-linecap="round"/>
+            <path d="M23 69l10-7M77 69l-10-7" stroke="#46575c" stroke-width=".55"/>
+            <path d="M55 66h1.8v7H55z" fill="#6e797b"/>
 
-            <path d="M38.5 26h19v58h-19z" fill="#dfe5e3" stroke="#78888c" stroke-width="1.4"/>
-            <rect x="41" y="32" width="14" height="26" rx="1.7" fill="url(#thg-glass-${id})" stroke="#657a81" stroke-width="1"/>
-            <path d="M42.2 34h11.6M42.2 56h11.6" stroke="#42565d" stroke-width=".7"/>
-            <rect x="46.6" y="62" width="2.8" height="11" rx=".7" fill="#8d999b"/>
+            <!-- Side mirrors -->
+            <path d="M13 39h-3q-2 0-2 3v13q0 3 2 3h3M87 39h3q2 0 2 3v13q0 3-2 3h-3" fill="#9da8a9" stroke="#59676b" stroke-width="1"/>
+            <path d="M9 43h4v11H9zM87 43h4v11h-4z" fill="#c8cfce"/>
 
-            <g fill="#c62d35" stroke="#631d23" stroke-width=".5"><circle cx="20" cy="72" r="2.7"/><circle cx="76" cy="72" r="2.7"/></g>
-            <path d="M13 75h25.5v4H13zM57.5 75H83v4H57.5z" fill="#f28a2f"/>
-            <path d="M13 80h25.5v4H13zM57.5 80H83v4H57.5z" fill="#1a9e70"/>
-            <path d="M13 85h25.5v4H13zM57.5 85H83v4H57.5z" fill="#287fb4"/>
-            <path d="M38.5 75h19v14h-19z" fill="#e2e7e5" stroke="#78888c" stroke-width="1"/>
-            <text x="48" y="83.7" text-anchor="middle" font-size="4" font-weight="900" fill="#258166">THR</text>
-            <text x="69" y="93" text-anchor="middle" font-size="3.5" font-weight="900" fill="#475255">THG101</text>
+            <!-- The three bands rise toward the centre instead of running straight -->
+            <path d="M13 74h20q4 0 7 5l2 3H30q-2-3-6-3H13zM87 74H67q-4 0-7 5l-2 3h12q2-3 6-3h11z" fill="#f28a25"/>
+            <path d="M13 80h16q4 0 7 4l3 4H27q-3-3-7-3h-7zM87 80H71q-4 0-7 4l-3 4h12q3-3 7-3h7z" fill="#149d69"/>
+            <path d="M13 86h13q4 0 7 4l2 3h-9q-3-2-7-2h-6zM87 86H74q-4 0-7 4l-2 3h9q3-2 7-2h6z" fill="#2184bb"/>
+            <path d="M13 79h17M70 79h17M13 85h14M73 85h14" stroke="#f1f1ed" stroke-width="1"/>
 
-            <g fill="#78868a" stroke="#3e494d" stroke-width=".8"><path d="M17 91h10v11H17zM69 91h10v11H69z"/><path d="M29 92h8v10h-8zM59 92h8v10h-8z"/></g>
-            <path d="M16 97h64v5H16z" fill="#5d696d" stroke="#333d40" stroke-width="1"/>
-            <g fill="#414c50" stroke="#1f292c" stroke-width="1"><rect x="41" y="91" width="14" height="9" rx="1.5"/><path d="M44 99h8v6h-8z"/><path d="M37 104h22v3H37z"/></g>
-            <path d="M40 95c-8 3-7 8-12 10M56 95c8 3 7 8 12 10" fill="none" stroke="#20282b" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M33 91v11M63 91v11" stroke="#2b3437" stroke-width="2.4"/>
-            <rect x="43" y="87" width="10" height="3" rx=".6" fill="#5d696d"/>
+            <!-- Lower lamps, skirt and exposed coupling gear -->
+            <g fill="#eef1ee" stroke="#899395" stroke-width=".65"><rect x="17" y="94" width="14" height="3.4" rx=".6"/><rect x="69" y="94" width="14" height="3.4" rx=".6"/></g>
+            <path d="M16 99h18v7H16zM66 99h18v7H66z" fill="#aeb8b8" stroke="#596569" stroke-width=".8"/>
+            <path d="M22 98v11M78 98v11M33 96v13M67 96v13" stroke="#697679" stroke-width="2.4"/>
+            <g fill="#697477" stroke="#30393c" stroke-width="1"><rect x="40" y="94" width="20" height="9" rx="1.7"/><path d="M44 102h12v7H44z"/><path d="M36 108h28v3H36z"/></g>
+            <path d="M41 99c-9 2-10 7-15 9M59 99c9 2 10 7 15 9" fill="none" stroke="#222a2d" stroke-width="1.5" stroke-linecap="round"/>
         </svg>`;
 }
 
