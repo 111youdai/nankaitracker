@@ -69,80 +69,184 @@ function isFeaturedVehicle(vehicleId, vehicleName) {
 }
 
 const VEHICLE_ICON_THEMES = Object.freeze({
-    THG101: { body: "#f4f7f5", lower: "#eef4f2", stripe: "#159a76", accent: "#f28a2e", motif: "thg" },
-    TH2101: { body: "#f0d990", lower: "#e8751b", stripe: "#17683a", accent: "#f2aa32", motif: "re" },
-    TH2102: { body: "#e8d9b8", lower: "#dc4726", stripe: "#28231d", accent: "#f1c56a", motif: "retro" },
-    TH2103: { body: "#e9edf0", lower: "#bb1728", stripe: "#111820", accent: "#e6bd39", motif: "catalyzer" },
-    TH2104: { body: "#f3f5f4", lower: "#e8eeee", stripe: "#1577b7", accent: "#ef7b2d", motif: "original" },
-    TH2105: { body: "#f3f5f4", lower: "#e8eeee", stripe: "#1599c8", accent: "#ed8a2f", motif: "una" },
-    TH2107: { body: "#1c603b", lower: "#154b31", stripe: "#e8f4e9", accent: "#ef8db5", motif: "flower" },
-    TH2108: { body: "#d9edf3", lower: "#9bd6e8", stripe: "#2678ae", accent: "#172f4b", motif: "bike" },
-    TH2109: { body: "#dce9c9", lower: "#31a89b", stripe: "#f0a045", accent: "#407c42", motif: "mountain" },
-    TH2110: { body: "#f4d64d", lower: "#c68b18", stripe: "#29261d", accent: "#fff5c2", motif: "bee" },
-    TH2111: { body: "#5a34a5", lower: "#35206f", stripe: "#38d0a4", accent: "#ff6b2e", motif: "eva" },
-    TH2112: { body: "#d8eff8", lower: "#2377ca", stripe: "#55c4ed", accent: "#f1c842", motif: "wave" },
-    TH2113: { body: "#1b2e51", lower: "#17243d", stripe: "#c9d2dd", accent: "#dd2532", motif: "katana" },
-    TH2114: { body: "#f3f5f4", lower: "#e8eeee", stripe: "#1577b7", accent: "#ef7b2d", motif: "original" },
-    TH9200: { body: "#28445a", lower: "#21394d", stripe: "#ad9560", accent: "#d6caa1", motif: "marimekko" }
+    TH2101: { base: "#f0d993", type: "re", destination: "掛川" },
+    TH2102: { base: "#e9d7ad", type: "kiha", destination: "回送" },
+    TH2103: { base: "#f2f5f2", type: "catalyzer", destination: "掛川" },
+    TH2104: { base: "#f4f6f4", type: "standard", destination: "掛川" },
+    TH2105: { base: "#f4f6f4", type: "una", destination: "新所原" },
+    TH2107: { base: "#165a35", type: "flower", destination: "掛川" },
+    TH2108: { base: "#d8edf3", type: "bike", destination: "新所原" },
+    TH2109: { base: "#e3e8bd", type: "yurucamp", destination: "掛川" },
+    TH2110: { base: "#f3d642", type: "bee", destination: "新所原" },
+    TH2111: { base: "#56319b", type: "eva", destination: "掛川" },
+    TH2112: { base: "#d9f0f7", type: "wave", destination: "掛川" },
+    TH2113: { base: "#152a4b", type: "katana", destination: "掛川" },
+    TH2114: { base: "#f4f6f4", type: "standard", destination: "掛川" },
+    TH9200: { base: "#27465a", type: "slow", destination: "掛川" }
 });
 
-function getVehicleMotif(theme) {
-    switch (theme.motif) {
-        case "flower":
-            return `<g fill="${theme.accent}"><circle cx="22" cy="56" r="2.6"/><circle cx="18" cy="59" r="2.6"/><circle cx="26" cy="59" r="2.6"/><circle cx="22" cy="62" r="2.6"/><circle cx="22" cy="59" r="1.6" fill="#fff4a8"/><circle cx="43" cy="59" r="2.4"/><circle cx="47" cy="62" r="2.4"/><circle cx="39" cy="62" r="2.4"/></g>`;
-        case "bike":
-            return `<g fill="none" stroke="${theme.accent}" stroke-width="1.8"><circle cx="23" cy="60" r="4"/><circle cx="42" cy="60" r="4"/><path d="M23 60l7-8 5 8H23l5-5h9l5 5M30 52h5"/></g>`;
-        case "katana":
-            return `<g stroke-linecap="round"><path d="M19 64L44 51" stroke="#eef3f8" stroke-width="3"/><path d="M18 61L25 67" stroke="${theme.accent}" stroke-width="3"/><path d="M37 49L45 57" stroke="${theme.accent}" stroke-width="2"/></g>`;
-        case "eva":
-            return `<path d="M17 63l9-12 6 8 7-8 9 12-8-5-8 8-8-8z" fill="${theme.accent}"/><path d="M21 60h22" stroke="#42e5a7" stroke-width="2"/>`;
-        case "wave":
-            return `<path d="M12 62c9-10 15 7 24-3s13 1 17 4" fill="none" stroke="#eafaff" stroke-width="3"/><path d="M12 66c8-7 16 6 25-2s12 0 16 2" fill="none" stroke="${theme.accent}" stroke-width="2"/>`;
-        case "marimekko":
-            return `<g fill="${theme.accent}"><circle cx="20" cy="58" r="3"/><circle cx="27" cy="63" r="2"/><circle cx="37" cy="57" r="2.5"/><circle cx="45" cy="63" r="3"/></g>`;
-        case "mountain":
-            return `<path d="M13 64l10-12 7 8 7-11 15 15z" fill="${theme.accent}"/><path d="M23 52l3 4 2-3 4 7" fill="none" stroke="#fff7db" stroke-width="1.6"/>`;
-        case "bee":
-            return `<g><ellipse cx="32" cy="58" rx="9" ry="6" fill="${theme.accent}"/><path d="M25 55h14M24 59h16M27 63h10" stroke="#29261d" stroke-width="2"/><ellipse cx="21" cy="55" rx="5" ry="3" fill="#fff" opacity=".8"/><ellipse cx="43" cy="55" rx="5" ry="3" fill="#fff" opacity=".8"/></g>`;
-        case "una":
-            return `<path d="M15 62c7-12 13 7 20-4s10-5 15-1" fill="none" stroke="${theme.accent}" stroke-width="4" stroke-linecap="round"/><circle cx="47" cy="55" r="1.2" fill="#17212a"/>`;
+function getDetailedLivery(vehicleId, type) {
+    switch (type) {
         case "re":
-            return `<path d="M13 55h39v5H13z" fill="${theme.stripe}"/><path d="M13 61h39v5H13z" fill="${theme.accent}"/>`;
-        case "thg":
-            return `<path d="M12 55h40v3H12z" fill="#ef8b2f"/><path d="M12 59h40v3H12z" fill="#159a76"/><path d="M12 63h40v3H12z" fill="#2786bf"/>`;
+            return `
+                <path d="M15 19h66v57H15z" fill="#175c35"/>
+                <path d="M15 76h66v29H15z" fill="#e56f18"/>
+                <path d="M15 72h66v6H15z" fill="#f5d88d"/>
+                <path d="M42 25h12v70H42z" fill="#f0d991"/>
+                <text x="48" y="88" text-anchor="middle" font-size="6" font-weight="900" fill="#175c35">Re+</text>`;
+        case "kiha":
+            return `
+                <path d="M15 18h66v61H15z" fill="#ead9b6"/>
+                <path d="M15 79h66v28H15z" fill="#dd4e28"/>
+                <path d="M15 76h66v4H15z" fill="#25231f"/>
+                <path d="M42 25h12v70H42z" fill="#ead9b6"/>
+                <path d="M42 79h12v16H42z" fill="#dc4e28"/>
+                <text x="48" y="91" text-anchor="middle" font-size="5" font-weight="900" fill="#302a20">THR</text>`;
         case "catalyzer":
-            return `<path d="M14 65l8-14 9 9 9-12 11 17z" fill="${theme.stripe}"/><circle cx="32" cy="57" r="4" fill="${theme.accent}"/>`;
-        case "retro":
-            return `<path d="M12 58h40v8H12z" fill="${theme.lower}"/><path d="M12 57h40" stroke="#3a3022" stroke-width="2"/>`;
+            return `
+                <path d="M15 18h66v88H15z" fill="#008c82"/>
+                <g fill="#f6f8f5"><path d="M15 23l22-5-17 21 20-7-25 27z"/><path d="M81 25L60 18l16 22-19-8 24 28z"/><path d="M15 69l24-18-12 31 17-12-13 36H15z"/><path d="M81 70L59 52l11 31-16-12 12 35h15z"/></g>
+                <path d="M42 26h12v68H42z" fill="#f7faf7"/>
+                <circle cx="48" cy="84" r="7" fill="#fff" stroke="#e23845" stroke-width="1.5"/>
+                <text x="48" y="82" text-anchor="middle" font-size="4" font-weight="900" fill="#008c82">地元</text><text x="48" y="87" text-anchor="middle" font-size="4" font-weight="900" fill="#e23845">LOVE</text>`;
+        case "una":
+            return `
+                <path d="M15 18h66v88H15z" fill="#f5f7f5"/>
+                <path d="M15 80h66v7H15z" fill="#15a8b7"/><path d="M15 88h66v6H15z" fill="#1676b7"/><path d="M15 95h66v4H15z" fill="#ee7a30"/>
+                <path d="M42 25h12v70H42z" fill="#f6f8f6"/>
+                <path d="M18 101c9-13 14 8 23-4s15-7 22-1 11 1 17-6" fill="none" stroke="#eb79b4" stroke-width="2.2"/>
+                <path d="M21 100c8-8 14 6 22-3s14-4 19 0" fill="none" stroke="#32c6ce" stroke-width="2"/>
+                <circle cx="68" cy="96" r="3" fill="#f0b2d0"/><text x="48" y="90" text-anchor="middle" font-size="5" font-weight="900" fill="#1680bf">THR</text>`;
+        case "flower":
+            return `
+                <path d="M15 18h66v88H15z" fill="#175b36"/>
+                <path d="M42 25h12v69H42z" fill="#17482f"/>
+                <g fill="#fff4df"><circle cx="22" cy="80" r="2.2"/><circle cx="29" cy="91" r="1.7"/><circle cx="70" cy="83" r="2"/><circle cx="63" cy="96" r="1.8"/></g>
+                <g fill="#ed7dab"><circle cx="21" cy="84" r="1.5"/><circle cx="31" cy="87" r="1.5"/><circle cx="68" cy="88" r="1.6"/><circle cx="75" cy="97" r="1.5"/></g>
+                <path d="M17 101c13-12 23 7 33-2s18 1 30-8" fill="none" stroke="#9ecf82" stroke-width="2"/>
+                <circle cx="48" cy="84" r="7" fill="#f6f4dc"/><path d="M43 85c5-8 9-3 10 0-3 4-7 5-10 0z" fill="#dc6e85"/>`;
+        case "bike":
+            return `
+                <path d="M15 18h66v88H15z" fill="#a9dced"/>
+                <path d="M15 18h66v19H15z" fill="#1f6f9c"/>
+                <path d="M15 78l18-6 15 7 16-9 17 7v29H15z" fill="#e6f3f6"/>
+                <path d="M42 25h12v69H42z" fill="#75c4df"/>
+                <path d="M18 98c16-4 23 4 32-4s17-5 29-1" fill="none" stroke="#e75872" stroke-width="2"/>
+                <g fill="none" stroke="#183f5c" stroke-width="1.4"><circle cx="43" cy="86" r="5"/><circle cx="56" cy="86" r="5"/><path d="M43 86l5-8 4 8h-9l5-5h6l2 5"/></g>
+                <circle cx="48" cy="84" r="7" fill="#f7fbfb" opacity=".93"/><path d="M45 84l3-4 3 4-3 4z" fill="#235e7f"/>`;
+        case "yurucamp":
+            return `
+                <path d="M15 18h66v88H15z" fill="#cfe8dd"/>
+                <path d="M15 18h66v31H15z" fill="#168b82"/>
+                <path d="M42 25h12v69H42z" fill="#287a55"/>
+                <path d="M15 82l13-13 10 10 12-17 16 19 15-10v35H15z" fill="#f0a044"/>
+                <path d="M15 90l13-10 10 8 11-14 15 16 17-9v25H15z" fill="#e8e3b7"/>
+                <path d="M22 101l8-14 8 14zM62 102l7-13 8 13z" fill="#397947"/>
+                <path d="M48 78l4 7h-8z" fill="#fff4cf"/><circle cx="48" cy="82" r="7" fill="none" stroke="#f7efe1" stroke-width="1.5"/>`;
+        case "bee":
+            return `
+                <path d="M15 18h66v88H15z" fill="#f4d73d"/>
+                <path d="M42 25h12v69H42z" fill="#f8e46a"/>
+                <g fill="none" stroke="#bf8714" stroke-width="1.2" opacity=".8"><path d="M18 76l5-3 5 3v6l-5 3-5-3zM68 76l5-3 5 3v6l-5 3-5-3zM22 90l5-3 5 3v6l-5 3-5-3zM64 90l5-3 5 3v6l-5 3-5-3z"/></g>
+                <g transform="translate(48 84)"><ellipse cx="0" cy="0" rx="8" ry="5" fill="#2d2a22"/><path d="M-5-3v6M0-4v8M5-3v6" stroke="#f6d53e" stroke-width="2"/><ellipse cx="-8" cy="-5" rx="4" ry="2.5" fill="#fff" opacity=".85"/><ellipse cx="8" cy="-5" rx="4" ry="2.5" fill="#fff" opacity=".85"/></g>
+                <text x="48" y="101" text-anchor="middle" font-size="5" font-weight="900" fill="#3b3020">BEE HAPPY!</text>`;
+        case "eva":
+            return `
+                <path d="M15 18h66v88H15z" fill="#563098"/>
+                <path d="M42 25h12v69H42z" fill="#30205f"/>
+                <path d="M15 80l25-10 14 10 27-15v41H15z" fill="#34bd98"/>
+                <path d="M15 91l25-10 15 8 26-14v13L57 99l-16-8-26 10z" fill="#ef6a2d"/>
+                <path d="M15 86l25-10 15 8 26-15" fill="none" stroke="#cfda31" stroke-width="3"/>
+                <path d="M37 85l11-12 11 12-5-2-6 7-6-7z" fill="#171326" stroke="#f0aa31" stroke-width="1.5"/>
+                <text x="48" y="102" text-anchor="middle" font-size="5" font-weight="900" fill="#efe8ff">EVA</text>`;
+        case "wave":
+            return `
+                <path d="M15 18h66v88H15z" fill="#34aee1"/>
+                <path d="M15 18h66v23H15z" fill="#d3eff7"/>
+                <path d="M42 25h12v69H42z" fill="#158ac7"/>
+                <path d="M15 82c17-16 26 11 42-2s17-6 24-3v29H15z" fill="#166bc1"/>
+                <path d="M15 91c16-18 28 10 43-3s17-6 23-3" fill="none" stroke="#f5fbff" stroke-width="4"/>
+                <path d="M15 99c17-15 27 8 43-2s17-6 23-4" fill="none" stroke="#f2d33f" stroke-width="3"/>
+                <path d="M42 84l12-8v18H42z" fill="#d9f2f8" opacity=".55"/><text x="48" y="90" text-anchor="middle" font-size="5" font-weight="900" fill="#fff">C</text>`;
+        case "katana":
+            return `
+                <path d="M15 18h66v88H15z" fill="#16294a"/>
+                <path d="M42 25h12v69H42z" fill="#111b30"/>
+                <path d="M15 91h66v15H15z" fill="#1e345a"/>
+                <path d="M43 92l14-22" stroke="#f0f2f4" stroke-width="4"/><path d="M41 88l8 7" stroke="#d92332" stroke-width="3"/>
+                <path d="M18 94h19v7H18z" fill="#f3f5f5"/><path d="M18 99h19v2H18z" fill="#de2730"/>
+                <text x="48" y="87" text-anchor="middle" font-size="5" font-weight="900" fill="#fff">刀</text><text x="66" y="98" text-anchor="middle" font-size="4.5" font-weight="800" fill="#d9e2eb">KATANA</text>`;
+        case "slow":
+            return `
+                <path d="M15 18h66v88H15z" fill="#28485b"/>
+                <path d="M42 25h12v69H42z" fill="#243c4d"/>
+                <path d="M15 91h66v15H15z" fill="#203948"/>
+                <g fill="none" stroke="#bba267" stroke-width="1.4"><path d="M19 99c8-12 11 5 18-4M77 99c-8-12-11 5-18-4M22 91c5-8 9-7 13 0M74 91c-5-8-9-7-13 0"/><circle cx="27" cy="98" r="2"/><circle cx="69" cy="98" r="2"/></g>
+                <path d="M43 79h10v13H43z" fill="#1d3444"/><text x="48" y="88" text-anchor="middle" font-size="4" font-weight="900" fill="#c8b27a">THR</text>`;
         default:
-            return `<path d="M12 57h40v3H12z" fill="${theme.stripe}"/><path d="M12 61h40v3H12z" fill="${theme.accent}"/>`;
+            return `
+                <path d="M15 18h66v88H15z" fill="#f4f6f4"/>
+                <path d="M42 25h12v69H42z" fill="#f5f7f5"/>
+                <path d="M15 81h66v5H15z" fill="#159ba1"/><path d="M15 87h66v5H15z" fill="#ee7b2d"/><path d="M15 93h66v5H15z" fill="#1975b4"/>
+                <path d="M42 81h12v17H42z" fill="#f5f7f5"/><text x="48" y="91" text-anchor="middle" font-size="5" font-weight="900" fill="#1880bd">THR</text>`;
     }
 }
 
-export function getTenhamaVehicleIcon(vehicleId, size = "card") {
-    const theme = VEHICLE_ICON_THEMES[vehicleId] || VEHICLE_ICON_THEMES.TH2114;
-    const label = vehicleId || "天浜線車両";
-
+function getTh2100Icon(vehicleId, theme, label, size) {
+    const id = `${label}-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
     return `
-        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 64 82" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
-            <ellipse cx="32" cy="76" rx="22" ry="4" fill="rgba(0,0,0,.34)"/>
-            <path d="M26 67v10M38 67v10M22 76h20" stroke="#20282d" stroke-width="3" stroke-linecap="round"/>
-            <rect x="4" y="28" width="7" height="20" rx="2" fill="#98a7ab"/>
-            <rect x="53" y="28" width="7" height="20" rx="2" fill="#98a7ab"/>
-            <path d="M10 17Q32 5 54 17L57 64Q56 71 49 73H15Q8 71 7 64z" fill="${theme.body}" stroke="#75858a" stroke-width="2"/>
-            <path d="M13 12Q32 3 51 12L49 18H15z" fill="#59666a"/>
-            <rect x="25" y="14" width="14" height="6" rx="2" fill="${theme.accent}"/>
-            <rect x="14" y="22" width="36" height="26" rx="4" fill="#101a20"/>
-            <path d="M32 22v26" stroke="#607078" stroke-width="2"/>
-            <path d="M15 44l7-5M49 44l-7-5" stroke="#8ea1a8" stroke-width="1.5"/>
-            <circle cx="16" cy="18" r="3.1" fill="#fff3a6" stroke="#bd9238"/>
-            <circle cx="48" cy="18" r="3.1" fill="#fff3a6" stroke="#bd9238"/>
-            <path d="M9 50h46v17Q54 71 48 72H16Q10 71 9 67z" fill="${theme.lower}"/>
-            ${getVehicleMotif(theme)}
-            <rect x="17" y="68" width="30" height="5" rx="2" fill="#2c3438"/>
-            <circle cx="22" cy="70.5" r="1.2" fill="#d9e2e3"/><circle cx="42" cy="70.5" r="1.2" fill="#d9e2e3"/>
-        </svg>
-    `;
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 128" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+            <defs>
+                <clipPath id="body-${id}"><path d="M20 17Q48 3 76 17L82 99Q81 110 70 114H26Q15 110 14 99z"/></clipPath>
+                <linearGradient id="glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#253944"/><stop offset=".6" stop-color="#071117"/><stop offset="1" stop-color="#17272f"/></linearGradient>
+            </defs>
+            <ellipse cx="48" cy="119" rx="34" ry="6" fill="rgba(0,0,0,.38)"/>
+            <g stroke="#21282c" stroke-linecap="round"><path d="M35 105v15M61 105v15" stroke-width="5"/><path d="M29 119h38" stroke-width="5"/><path d="M44 107v15M52 107v15" stroke-width="2"/></g>
+            <g fill="#91a0a5" stroke="#536166" stroke-width="1"><path d="M7 38h9v30H9Q6 66 6 62V42q0-3 1-4z"/><path d="M89 38h-9v30h7q3-2 3-6V42q0-3-1-4z"/></g>
+            <path d="M20 17Q48 3 76 17L82 99Q81 110 70 114H26Q15 110 14 99z" fill="${theme.base}" stroke="#6f7d80" stroke-width="2.4"/>
+            <g clip-path="url(#body-${id})">${getDetailedLivery(vehicleId, theme.type)}</g>
+            <path d="M22 14Q48 3 74 14l-3 7H25z" fill="#68777b"/><path d="M26 12Q48 5 70 12" fill="none" stroke="#b8c1c2" stroke-width="2"/>
+            <rect x="36" y="14" width="24" height="11" rx="2" fill="#182328" stroke="#9eabad" stroke-width="1"/>
+            <text x="48" y="21.5" text-anchor="middle" font-size="5.4" font-weight="800" fill="#7ee3b5">${escapeHtml(theme.destination)}</text>
+            <g><rect x="20" y="28" width="22" height="43" rx="3" fill="url(#glass-${id})" stroke="#53656c" stroke-width="1.4"/><rect x="54" y="28" width="22" height="43" rx="3" fill="url(#glass-${id})" stroke="#53656c" stroke-width="1.4"/>
+                <path d="M22 66l13-12M74 66L61 54" stroke="#a9bbc0" stroke-width="1.5"/><path d="M22 31h18M56 31h18" stroke="#425861" stroke-width="1"/></g>
+            <path d="M42 25h12v70H42z" fill="none" stroke="#65757b" stroke-width="1.5"/><rect x="44" y="31" width="8" height="30" rx="1.5" fill="#122129" stroke="#778b92" stroke-width="1"/>
+            <path d="M44 33h8M44 59h8" stroke="#3b515a" stroke-width="1"/><path d="M47 65h2v12h-2z" fill="#909da1"/>
+            <g><circle cx="23" cy="21" r="5.1" fill="#efe8b4" stroke="#76652e" stroke-width="1.2"/><circle cx="23" cy="21" r="2.7" fill="#fff9ca"/><circle cx="73" cy="21" r="5.1" fill="#efe8b4" stroke="#76652e" stroke-width="1.2"/><circle cx="73" cy="21" r="2.7" fill="#fff9ca"/></g>
+            <g fill="#cf3140" stroke="#5f2429" stroke-width=".8"><circle cx="21" cy="76" r="2.4"/><circle cx="75" cy="76" r="2.4"/></g>
+            <path d="M18 103h60" stroke="#5d696d" stroke-width="2"/><rect x="28" y="104" width="40" height="9" rx="2" fill="#263136" stroke="#7e898c" stroke-width="1.2"/>
+            <rect x="37" y="106" width="22" height="6" rx="1" fill="#bbc3c4"/><text x="48" y="111" text-anchor="middle" font-size="4.3" font-weight="800" fill="#293236">${escapeHtml(vehicleId)}</text>
+            <path d="M26 107v9M70 107v9M31 113l-5 6M65 113l5 6" stroke="#262e31" stroke-width="2"/><rect x="44" y="112" width="8" height="8" rx="1" fill="#1c2427"/>
+        </svg>`;
+}
+
+function getThg101Icon(label, size) {
+    const id = `thg-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
+    return `
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 128" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+            <defs><linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#334b58"/><stop offset=".55" stop-color="#081318"/><stop offset="1" stop-color="#1b3039"/></linearGradient></defs>
+            <ellipse cx="48" cy="119" rx="35" ry="6" fill="rgba(0,0,0,.38)"/>
+            <g stroke="#20282c" stroke-linecap="round"><path d="M35 105v15M61 105v15" stroke-width="5"/><path d="M28 119h40" stroke-width="5"/><path d="M44 108v13M52 108v13" stroke-width="2"/></g>
+            <path d="M17 20Q48 5 79 20L83 99Q82 110 70 114H26Q14 110 13 99z" fill="#eef3f1" stroke="#66787d" stroke-width="2.4"/>
+            <path d="M20 17Q48 5 76 17l-4 7H24z" fill="#768589"/>
+            <rect x="31" y="14" width="34" height="11" rx="2" fill="#0b171c"/><text x="48" y="21" text-anchor="middle" font-size="5.5" font-weight="800" fill="#ff9a3b">掛川</text>
+            <path d="M18 29h60v42Q77 76 71 78H25Q19 76 18 71z" fill="url(#thg-glass-${id})" stroke="#50636b" stroke-width="1.6"/>
+            <path d="M48 29v48" stroke="#81949a" stroke-width="2"/><path d="M21 68l16-14M75 68L59 54" stroke="#a9bec5" stroke-width="1.7"/>
+            <circle cx="22" cy="23" r="4.8" fill="#fff3a6" stroke="#8d7736"/><circle cx="74" cy="23" r="4.8" fill="#fff3a6" stroke="#8d7736"/>
+            <path d="M14 79h68v27H14z" fill="#eef3f1"/><path d="M14 84c18 8 23-3 34 3s20 6 34-2" fill="none" stroke="#ef7c2d" stroke-width="4"/>
+            <path d="M14 91c16 7 24-4 35 2s20 6 33-2" fill="none" stroke="#15996f" stroke-width="4"/>
+            <path d="M14 98c17 7 25-4 36 2s19 5 32-2" fill="none" stroke="#237eb5" stroke-width="4"/>
+            <path d="M42 76h12v28H42z" fill="#f5f7f5" stroke="#79898d" stroke-width="1.2"/><rect x="44" y="79" width="8" height="12" fill="#223740"/><text x="48" y="100" text-anchor="middle" font-size="4.5" font-weight="900" fill="#187eaa">GreenDEC</text>
+            <rect x="28" y="104" width="40" height="9" rx="2" fill="#253136"/><rect x="37" y="106" width="22" height="6" rx="1" fill="#bbc3c4"/><text x="48" y="111" text-anchor="middle" font-size="4.2" font-weight="800" fill="#293236">THG101</text>
+            <path d="M26 107v9M70 107v9M31 113l-5 6M65 113l5 6" stroke="#252e31" stroke-width="2"/><rect x="44" y="112" width="8" height="8" rx="1" fill="#1b2427"/>
+        </svg>`;
+}
+
+export function getTenhamaVehicleIcon(vehicleId, size = "card") {
+    const label = vehicleId || "天浜線車両";
+    if (vehicleId === "THG101") return getThg101Icon(label, size);
+    const theme = VEHICLE_ICON_THEMES[vehicleId] || VEHICLE_ICON_THEMES.TH2114;
+    return getTh2100Icon(vehicleId || "TH2114", theme, label, size);
 }
 
 function getPosition(trip, currentMinute) {

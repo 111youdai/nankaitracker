@@ -33,6 +33,7 @@ test("深夜帯は在線列車を表示しない", () => {
 });
 
 test("全車両に判別用の正面アイコンを生成する", () => {
+    const icons = [];
     for (const vehicleId of [
         "THG101", "TH2101", "TH2102", "TH2103", "TH2104",
         "TH2105", "TH2107", "TH2108", "TH2109", "TH2110",
@@ -40,8 +41,11 @@ test("全車両に判別用の正面アイコンを生成する", () => {
     ]) {
         const icon = getTenhamaVehicleIcon(vehicleId);
         assert.match(icon, /<svg/);
+        assert.match(icon, /viewBox="0 0 96 128"/);
         assert.match(icon, new RegExp(vehicleId));
+        icons.push(icon);
     }
+    assert.equal(new Set(icons).size, 15, "15車両すべてを個別の塗装で描き分ける");
 });
 
 test("全列車の推定時刻が進行方向に単調増加する", () => {
