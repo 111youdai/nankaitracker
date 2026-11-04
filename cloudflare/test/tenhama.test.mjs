@@ -41,7 +41,7 @@ test("全車両に判別用の正面アイコンを生成する", () => {
     ]) {
         const icon = getTenhamaVehicleIcon(vehicleId);
         assert.match(icon, /<svg/);
-        assert.match(icon, /viewBox="0 0 96 128"/);
+        assert.match(icon, /viewBox="0 0 96 108"/);
         assert.match(icon, new RegExp(vehicleId));
         icons.push(icon);
     }

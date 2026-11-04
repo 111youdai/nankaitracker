@@ -226,12 +226,13 @@ function getTh2100Icon(vehicleId, theme, label, size) {
         slow: '<text x="48" y="88" text-anchor="middle" font-size="4" font-weight="900" fill="#c8b27a">THR</text>'
     }[theme.type] || "";
     return `
-        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 128" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
             <defs>
                 <clipPath id="body-${id}"><path d="M13 25Q13 15 23 11Q48 3 73 11Q83 15 83 25V96Q83 101 77 103H19Q13 101 13 96z"/></clipPath>
                 <linearGradient id="glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#253944"/><stop offset=".6" stop-color="#071117"/><stop offset="1" stop-color="#17272f"/></linearGradient>
                 <linearGradient id="lamp-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffde1"/><stop offset="1" stop-color="#e9d98d"/></linearGradient>
             </defs>
+            <g transform="scale(1 .84)">
             <ellipse cx="48" cy="121" rx="35" ry="5" fill="rgba(0,0,0,.38)"/>
             <g fill="#8c999e" stroke="#4e595d" stroke-width="1"><path d="M7 42h7v27H9Q6 67 6 63V46q0-3 1-4z"/><path d="M89 42h-7v27h5q3-2 3-6V46q0-3-1-4z"/><path d="M13 48H8M83 48h5" fill="none"/></g>
             <path d="M13 25Q13 15 23 11Q48 3 73 11Q83 15 83 25V96Q83 101 77 103H19Q13 101 13 96z" fill="${theme.base}" stroke="#6f7d80" stroke-width="2"/>
@@ -263,14 +264,16 @@ function getTh2100Icon(vehicleId, theme, label, size) {
             <path d="M34 102v14M62 102v14" stroke="#252d30" stroke-width="3"/>
             <g fill="#525d61" stroke="#252d30" stroke-width="1"><rect x="40" y="104" width="16" height="10" rx="1.5"/><path d="M43 113h10v8H43z"/><path d="M38 119h20v4H38z"/></g>
             <path d="M39 107c-8 4-8 12-13 13M57 107c8 4 8 12 13 13" fill="none" stroke="#202729" stroke-width="1.5"/>
+            </g>
         </svg>`;
 }
 
 function getThg101Icon(label, size) {
     const id = `thg-${size}`.replace(/[^a-zA-Z0-9-]/g, "");
     return `
-        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 128" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
+        <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
             <defs><linearGradient id="thg-glass-${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#334b58"/><stop offset=".55" stop-color="#081318"/><stop offset="1" stop-color="#1b3039"/></linearGradient></defs>
+            <g transform="scale(1 .84)">
             <ellipse cx="48" cy="119" rx="35" ry="6" fill="rgba(0,0,0,.38)"/>
             <g stroke="#20282c" stroke-linecap="round"><path d="M35 105v15M61 105v15" stroke-width="5"/><path d="M28 119h40" stroke-width="5"/><path d="M44 108v13M52 108v13" stroke-width="2"/></g>
             <path d="M17 20Q48 5 79 20L83 99Q82 110 70 114H26Q14 110 13 99z" fill="#eef3f1" stroke="#66787d" stroke-width="2.4"/>
@@ -285,6 +288,7 @@ function getThg101Icon(label, size) {
             <path d="M42 76h12v28H42z" fill="#f5f7f5" stroke="#79898d" stroke-width="1.2"/><rect x="44" y="79" width="8" height="12" fill="#223740"/><text x="48" y="100" text-anchor="middle" font-size="4.5" font-weight="900" fill="#187eaa">GreenDEC</text>
             <rect x="28" y="104" width="40" height="9" rx="2" fill="#253136"/><rect x="37" y="106" width="22" height="6" rx="1" fill="#bbc3c4"/><text x="48" y="111" text-anchor="middle" font-size="4.2" font-weight="800" fill="#293236">THG101</text>
             <path d="M26 107v9M70 107v9M31 113l-5 6M65 113l5 6" stroke="#252e31" stroke-width="2"/><rect x="44" y="112" width="8" height="8" rx="1" fill="#1b2427"/>
+            </g>
         </svg>`;
 }
 
