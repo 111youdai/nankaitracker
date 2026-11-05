@@ -39,6 +39,10 @@ function formationParts(formation){
  if(!formation?.verified)return [];
  return (formation.numbers||[]).map((n,index)=>({formation:`${Number(n)}F`,cars:Number(formation.counts?.[index]||0)})).filter(x=>/^\d+F$/.test(x.formation)&&x.formation!=='0F'&&x.cars>0);
 }
+function formationNames(value){
+ const text=String(value||'').normalize('NFKC').toUpperCase();
+ return [...new Set([...text.matchAll(/(\d{3,5})\s*F\b/g)].map(match=>`${Number(match[1])}F`))];
+}
 function logKind(event){
  const special=event.special||core.specialService(event.trainNumber,event.serviceDate);
  if(special?.category==='chiyoda-entry'||event.lastPosition?.text==='千代田工場')return 'entry';
@@ -54,20 +58,28 @@ function evidenceLabel(event){
 function inferLogStatus(events){
  const ordered=[...events].sort((a,b)=>String(a.lastSeen).localeCompare(String(b.lastSeen))),latest=ordered.at(-1);
  const movements=ordered.filter(e=>logKind(e)!=='generic'),movement=movements.at(-1),kind=movement?logKind(movement):'generic';
- if(kind==='entry')return {text:`千代田工場への入場を${movement.trainNumber}レで確認`,kind:'works',strong:true,updatedAt:movement.lastSeen};
+ if(kind==='entry')return {text:`千代田工場への入場を${movement.trainNumber}レで確認`,kind:'works',strong:true,updatedAt:movement.lastSeen,statusDate:movement.serviceDate};
  if(kind==='exit'){
   const later=String(latest.lastSeen)>String(movement.lastSeen)?`。最新は${latest.trainNumber}レ・${cleanPlace(latest.lastPosition?.text)}まで確認`:`。最終は${cleanPlace(movement.lastPosition?.text)}まで確認`;
-  return {text:`千代田工場からの出場を${movement.trainNumber}レで確認${later}`,kind:'out',strong:true,updatedAt:latest.lastSeen};
+  return {text:`千代田工場からの出場を${movement.trainNumber}レで確認${later}`,kind:'out',strong:true,updatedAt:latest.lastSeen,statusDate:movement.serviceDate};
  }
- if(kind==='transfer')return {text:`${movement.special?.label||'廃車回送'}を${movement.trainNumber}レで確認`,kind:'transfer',strong:true,updatedAt:movement.lastSeen};
- if(kind==='special')return {text:`${movement.special.label}を${movement.trainNumber}レで確認`,kind:statusKind(movement.special.label),strong:true,updatedAt:movement.lastSeen};
- return {text:`定期外候補 ${latest.trainNumber}レで${cleanPlace(latest.lastPosition?.text)||'最終位置不明'}まで確認`,kind:'check',strong:false,updatedAt:latest.lastSeen};
+ if(kind==='transfer')return {text:`${movement.special?.label||'廃車回送'}を${movement.trainNumber}レで確認`,kind:'transfer',strong:true,updatedAt:movement.lastSeen,statusDate:movement.serviceDate};
+ if(kind==='special')return {text:`${movement.special.label}を${movement.trainNumber}レで確認`,kind:statusKind(movement.special.label),strong:true,updatedAt:movement.lastSeen,statusDate:movement.serviceDate};
+ return {text:`定期外候補 ${latest.trainNumber}レで${cleanPlace(latest.lastPosition?.text)||'最終位置不明'}まで確認`,kind:'check',strong:false,updatedAt:latest.lastSeen,statusDate:latest.serviceDate};
 }
-function mergeFleetStatus(snapshot={items:[]},events=[]){
+function mergeFleetStatus(snapshot={items:[]},events=[],normalOperations=[]){
  const table=new Map();
+ const snapshotDate=snapshot.fetchedAt?core.serviceDate(new Date(snapshot.fetchedAt)):null;
+ const latestNormalDate=new Map();
+ for(const operation of normalOperations){
+  for(const name of formationNames(operation.formation)){
+   const date=String(operation.serviceDate||'');
+   if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&date>(latestNormalDate.get(name)||''))latestNormalDate.set(name,date);
+  }
+ }
  for(const hub of snapshot.items||[]){
   const hubStatus=hub.hubEntries.map(x=>x.status).filter((v,i,a)=>a.indexOf(v)===i).join(' ／ ');
-  table.set(hub.formation,{...hub,hubStatus,status:hubStatus,kind:statusKind(hubStatus),source:'hub',updatedAt:snapshot.fetchedAt,evidence:hub.hubEntries.map(x=>({source:'hub',label:`${x.groupLabel}：${x.status}`,url:x.sourceUrl}))});
+  table.set(hub.formation,{...hub,hubStatus,status:hubStatus,kind:statusKind(hubStatus),source:'hub',updatedAt:snapshot.fetchedAt,statusDate:snapshotDate,evidence:hub.hubEntries.map(x=>({source:'hub',label:`${x.groupLabel}：${x.status}`,url:x.sourceUrl}))});
  }
  const logMap=new Map();
  for(const event of events){for(const part of formationParts(event.formation)){if(!logMap.has(part.formation))logMap.set(part.formation,[]);logMap.get(part.formation).push({...event,cars:part.cars});}}
@@ -75,8 +87,13 @@ function mergeFleetStatus(snapshot={items:[]},events=[]){
   const inferred=inferLogStatus(formationEvents),latest=[...formationEvents].sort((a,b)=>String(a.lastSeen).localeCompare(String(b.lastSeen))).at(-1),existing=table.get(formation);
   const logEvidence=[...formationEvents].sort((a,b)=>String(b.lastSeen).localeCompare(String(a.lastSeen))).slice(0,8).map(e=>({source:'log',label:evidenceLabel(e),eventId:e.id,trainNumber:e.trainNumber,serviceDate:e.serviceDate,groupName:e.groupName}));
   const useInference=inferred.strong||!existing;
-  table.set(formation,{...(existing||{formation,groups:[latest.groupName],hubEntries:[],hubStatus:null,evidence:[]}),cars:existing?.cars||latest.cars,status:useInference?inferred.text:existing.status,kind:useInference?inferred.kind:existing.kind,source:useInference?'log':'hub',updatedAt:useInference?inferred.updatedAt:existing.updatedAt,evidence:[...logEvidence,...(existing?.evidence||[])]});
+  table.set(formation,{...(existing||{formation,groups:[latest.groupName],hubEntries:[],hubStatus:null,evidence:[]}),cars:existing?.cars||latest.cars,status:useInference?inferred.text:existing.status,kind:useInference?inferred.kind:existing.kind,source:useInference?'log':'hub',updatedAt:useInference?inferred.updatedAt:existing.updatedAt,statusDate:useInference?inferred.statusDate:existing.statusDate,evidence:[...logEvidence,...(existing?.evidence||[])]});
  }
- return {fetchedAt:snapshot.fetchedAt||null,items:[...table.values()].map(item=>({...item,category:category(item)})).sort((a,b)=>a.category.localeCompare(b.category,'ja')||a.formation.localeCompare(b.formation,'ja',{numeric:true}))};
+ const items=[...table.values()].filter(item=>{
+  if(item.kind==='works')return true;
+  const normalDate=latestNormalDate.get(item.formation);
+  return !normalDate||!item.statusDate||normalDate<=item.statusDate;
+ });
+ return {fetchedAt:snapshot.fetchedAt||null,items:items.map(item=>({...item,category:category(item)})).sort((a,b)=>a.category.localeCompare(b.category,'ja')||a.formation.localeCompare(b.formation,'ja',{numeric:true}))};
 }
-module.exports={STATUS_WORDS,statusKind,category,buildHubFleet,mergeFleetStatus,formationParts,inferLogStatus};
+module.exports={STATUS_WORDS,statusKind,category,buildHubFleet,mergeFleetStatus,formationParts,formationNames,inferLogStatus};

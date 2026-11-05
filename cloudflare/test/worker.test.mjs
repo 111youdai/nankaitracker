@@ -35,6 +35,18 @@ test('運用Hubの編成状況を両数別にまとめ、列車ログから入�
  const inferred=merged.items.find(x=>x.formation==='2039F');assert.equal(inferred.source,'log');assert.equal(inferred.kind,'out');assert.match(inferred.status,/9474レ.*最新は8073レ.*住ノ江駅/);
 });
 
+test('翌日以降の通常運用を確認した編成は入場中を除いて編成状況から外す',()=>{
+ const snapshot=fleet.buildHubFleet({nankai:{'1006F':{caption:'千代田工場入場中',unavailable:1},'1007F':{caption:'羽倉崎検車区にて留置中',unavailable:1}},koya:{}},{nankai:{formations:{'1006F':{cars:[1,2,3,4,5,6]},'1007F':{cars:[1,2,3,4,5,6]}}},koya:{formations:{}}},'2026-10-29T15:00:00.000Z');
+ const make=(id,number,formation,lastSeen,first,last)=>({id,serviceDate:'2026-10-29',groupName:'koya',trainNumber:number,firstSeen:lastSeen,lastSeen,formation:{verified:true,numbers:[formation,0],counts:[2,0]},firstPosition:{text:first},lastPosition:{text:last},special:null});
+ const events=[make(1,'9474',2039,'2026-10-29T11:18:00.000Z','千代田工場','なんば駅'),make(2,'8673',2040,'2026-10-29T12:18:00.000Z','なんば駅','千代田工場')];
+ const operations=[{formation:'1007F',serviceDate:'2026-10-30'},{formation:'2039F+2040F',serviceDate:'2026-10-30'}];
+ const merged=fleet.mergeFleetStatus(snapshot,events,operations);
+ assert.equal(merged.items.some(item=>item.formation==='1007F'),false);
+ assert.equal(merged.items.some(item=>item.formation==='2039F'),false);
+ assert.equal(merged.items.some(item=>item.formation==='1006F'&&item.kind==='works'),true);
+ assert.equal(merged.items.some(item=>item.formation==='2040F'&&item.kind==='works'),true);
+});
+
 test('編成状況APIはHub記載と保存済み列車ログを統合する',async()=>{const db=database();try{
  const snapshot=fleet.buildHubFleet({nankai:{'1006F':{caption:'千代田工場入場中',unavailable:1}},koya:{}},{nankai:{formations:{'1006F':{cars:[1,2,3,4,5,6]}}},koya:{formations:{}}},new Date().toISOString());await put(db,'fleet-status',snapshot).run();
  const common={line_id:2,train_length_id:2,car_numbers:[2039,0],car_counts:[2,0],direction:'up'},payloads=[t('9474',{...common,station_id:118,next_station_id:78}),t('9474',{...common,station_id:117,next_station_id:77}),t('9474',{...common,station_id:116,next_station_id:76}),t('9474',{...common,station_id:116,next_station_id:null})],last=payloads.at(-1),form=JSON.stringify(core.formation(last));

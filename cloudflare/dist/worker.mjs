@@ -152,6 +152,10 @@ var require_fleet = __commonJS({
       if (!formation2?.verified) return [];
       return (formation2.numbers || []).map((n, index) => ({ formation: `${Number(n)}F`, cars: Number(formation2.counts?.[index] || 0) })).filter((x) => /^\d+F$/.test(x.formation) && x.formation !== "0F" && x.cars > 0);
     }
+    function formationNames(value) {
+      const text = String(value || "").normalize("NFKC").toUpperCase();
+      return [...new Set([...text.matchAll(/(\d{3,5})\s*F\b/g)].map((match) => `${Number(match[1])}F`))];
+    }
     function logKind(event) {
       const special = event.special || core3.specialService(event.trainNumber, event.serviceDate);
       if (special?.category === "chiyoda-entry" || event.lastPosition?.text === "\u5343\u4EE3\u7530\u5DE5\u5834") return "entry";
@@ -167,20 +171,28 @@ var require_fleet = __commonJS({
     function inferLogStatus(events) {
       const ordered = [...events].sort((a, b) => String(a.lastSeen).localeCompare(String(b.lastSeen))), latest = ordered.at(-1);
       const movements = ordered.filter((e) => logKind(e) !== "generic"), movement = movements.at(-1), kind = movement ? logKind(movement) : "generic";
-      if (kind === "entry") return { text: `\u5343\u4EE3\u7530\u5DE5\u5834\u3078\u306E\u5165\u5834\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: "works", strong: true, updatedAt: movement.lastSeen };
+      if (kind === "entry") return { text: `\u5343\u4EE3\u7530\u5DE5\u5834\u3078\u306E\u5165\u5834\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: "works", strong: true, updatedAt: movement.lastSeen, statusDate: movement.serviceDate };
       if (kind === "exit") {
         const later = String(latest.lastSeen) > String(movement.lastSeen) ? `\u3002\u6700\u65B0\u306F${latest.trainNumber}\u30EC\u30FB${cleanPlace2(latest.lastPosition?.text)}\u307E\u3067\u78BA\u8A8D` : `\u3002\u6700\u7D42\u306F${cleanPlace2(movement.lastPosition?.text)}\u307E\u3067\u78BA\u8A8D`;
-        return { text: `\u5343\u4EE3\u7530\u5DE5\u5834\u304B\u3089\u306E\u51FA\u5834\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D${later}`, kind: "out", strong: true, updatedAt: latest.lastSeen };
+        return { text: `\u5343\u4EE3\u7530\u5DE5\u5834\u304B\u3089\u306E\u51FA\u5834\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D${later}`, kind: "out", strong: true, updatedAt: latest.lastSeen, statusDate: movement.serviceDate };
       }
-      if (kind === "transfer") return { text: `${movement.special?.label || "\u5EC3\u8ECA\u56DE\u9001"}\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: "transfer", strong: true, updatedAt: movement.lastSeen };
-      if (kind === "special") return { text: `${movement.special.label}\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: statusKind(movement.special.label), strong: true, updatedAt: movement.lastSeen };
-      return { text: `\u5B9A\u671F\u5916\u5019\u88DC ${latest.trainNumber}\u30EC\u3067${cleanPlace2(latest.lastPosition?.text) || "\u6700\u7D42\u4F4D\u7F6E\u4E0D\u660E"}\u307E\u3067\u78BA\u8A8D`, kind: "check", strong: false, updatedAt: latest.lastSeen };
+      if (kind === "transfer") return { text: `${movement.special?.label || "\u5EC3\u8ECA\u56DE\u9001"}\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: "transfer", strong: true, updatedAt: movement.lastSeen, statusDate: movement.serviceDate };
+      if (kind === "special") return { text: `${movement.special.label}\u3092${movement.trainNumber}\u30EC\u3067\u78BA\u8A8D`, kind: statusKind(movement.special.label), strong: true, updatedAt: movement.lastSeen, statusDate: movement.serviceDate };
+      return { text: `\u5B9A\u671F\u5916\u5019\u88DC ${latest.trainNumber}\u30EC\u3067${cleanPlace2(latest.lastPosition?.text) || "\u6700\u7D42\u4F4D\u7F6E\u4E0D\u660E"}\u307E\u3067\u78BA\u8A8D`, kind: "check", strong: false, updatedAt: latest.lastSeen, statusDate: latest.serviceDate };
     }
-    function mergeFleetStatus2(snapshot = { items: [] }, events = []) {
+    function mergeFleetStatus2(snapshot = { items: [] }, events = [], normalOperations = []) {
       const table = /* @__PURE__ */ new Map();
+      const snapshotDate = snapshot.fetchedAt ? core3.serviceDate(new Date(snapshot.fetchedAt)) : null;
+      const latestNormalDate = /* @__PURE__ */ new Map();
+      for (const operation of normalOperations) {
+        for (const name of formationNames(operation.formation)) {
+          const date = String(operation.serviceDate || "");
+          if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date > (latestNormalDate.get(name) || "")) latestNormalDate.set(name, date);
+        }
+      }
       for (const hub2 of snapshot.items || []) {
         const hubStatus = hub2.hubEntries.map((x) => x.status).filter((v, i, a) => a.indexOf(v) === i).join(" \uFF0F ");
-        table.set(hub2.formation, { ...hub2, hubStatus, status: hubStatus, kind: statusKind(hubStatus), source: "hub", updatedAt: snapshot.fetchedAt, evidence: hub2.hubEntries.map((x) => ({ source: "hub", label: `${x.groupLabel}\uFF1A${x.status}`, url: x.sourceUrl })) });
+        table.set(hub2.formation, { ...hub2, hubStatus, status: hubStatus, kind: statusKind(hubStatus), source: "hub", updatedAt: snapshot.fetchedAt, statusDate: snapshotDate, evidence: hub2.hubEntries.map((x) => ({ source: "hub", label: `${x.groupLabel}\uFF1A${x.status}`, url: x.sourceUrl })) });
       }
       const logMap = /* @__PURE__ */ new Map();
       for (const event of events) {
@@ -193,11 +205,16 @@ var require_fleet = __commonJS({
         const inferred = inferLogStatus(formationEvents), latest = [...formationEvents].sort((a, b) => String(a.lastSeen).localeCompare(String(b.lastSeen))).at(-1), existing = table.get(formation2);
         const logEvidence = [...formationEvents].sort((a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen))).slice(0, 8).map((e) => ({ source: "log", label: evidenceLabel(e), eventId: e.id, trainNumber: e.trainNumber, serviceDate: e.serviceDate, groupName: e.groupName }));
         const useInference = inferred.strong || !existing;
-        table.set(formation2, { ...existing || { formation: formation2, groups: [latest.groupName], hubEntries: [], hubStatus: null, evidence: [] }, cars: existing?.cars || latest.cars, status: useInference ? inferred.text : existing.status, kind: useInference ? inferred.kind : existing.kind, source: useInference ? "log" : "hub", updatedAt: useInference ? inferred.updatedAt : existing.updatedAt, evidence: [...logEvidence, ...existing?.evidence || []] });
+        table.set(formation2, { ...existing || { formation: formation2, groups: [latest.groupName], hubEntries: [], hubStatus: null, evidence: [] }, cars: existing?.cars || latest.cars, status: useInference ? inferred.text : existing.status, kind: useInference ? inferred.kind : existing.kind, source: useInference ? "log" : "hub", updatedAt: useInference ? inferred.updatedAt : existing.updatedAt, statusDate: useInference ? inferred.statusDate : existing.statusDate, evidence: [...logEvidence, ...existing?.evidence || []] });
       }
-      return { fetchedAt: snapshot.fetchedAt || null, items: [...table.values()].map((item) => ({ ...item, category: category(item) })).sort((a, b) => a.category.localeCompare(b.category, "ja") || a.formation.localeCompare(b.formation, "ja", { numeric: true })) };
+      const items = [...table.values()].filter((item) => {
+        if (item.kind === "works") return true;
+        const normalDate = latestNormalDate.get(item.formation);
+        return !normalDate || !item.statusDate || normalDate <= item.statusDate;
+      });
+      return { fetchedAt: snapshot.fetchedAt || null, items: items.map((item) => ({ ...item, category: category(item) })).sort((a, b) => a.category.localeCompare(b.category, "ja") || a.formation.localeCompare(b.formation, "ja", { numeric: true })) };
     }
-    module.exports = { STATUS_WORDS, statusKind, category, buildHubFleet: buildHubFleet2, mergeFleetStatus: mergeFleetStatus2, formationParts, inferLogStatus };
+    module.exports = { STATUS_WORDS, statusKind, category, buildHubFleet: buildHubFleet2, mergeFleetStatus: mergeFleetStatus2, formationParts, formationNames, inferLogStatus };
   }
 });
 
@@ -871,8 +888,19 @@ async function handle(request, env) {
       const stale = !snapshot || !Number.isFinite(Date.parse(snapshot.fetchedAt)) || Date.now() - Date.parse(snapshot.fetchedAt) > 36e5;
       if (request.method === "POST" || stale) snapshot = await refreshFleet(db, /* @__PURE__ */ new Date());
       snapshot = snapshot || { fetchedAt: null, items: [] };
+      const today = import_core2.default.serviceDate(/* @__PURE__ */ new Date());
+      let live = await read(db, `live-formations:${today}`);
+      const liveStale = !live || !Number.isFinite(Date.parse(live.fetchedAt)) || Date.now() - Date.parse(live.fetchedAt) > 9e5;
+      if (liveStale) {
+        try {
+          live = await refreshLiveFormations(db, /* @__PURE__ */ new Date());
+        } catch (e) {
+          console.error("live formations refresh", e.message);
+        }
+      }
+      const normalOperations = Object.values(live?.items || {}).map((item) => ({ formation: item.formation, serviceDate: live.serviceDate }));
       const rows = (await db.prepare(eventSelect + " ORDER BY events.last_seen DESC,events.id DESC LIMIT 500").all()).results, events = rows.map(decodeEvent).map((e) => ({ id: e.id, serviceDate: e.service_date, groupName: e.group_name, trainNumber: e.train_number, firstSeen: e.first_seen, lastSeen: e.last_seen, formation: e.formation, firstPosition: e.first_position, lastPosition: e.last_position, special: e.special }));
-      return json(mergeFleetStatus(snapshot, events));
+      return json(mergeFleetStatus(snapshot, events, normalOperations));
     }
     if (p.startsWith("/api/logs")) {
       if (!await authorized(request, env.LOG_ACCESS_PASSWORD)) return json({ error: "\u30ED\u30B0\u95B2\u89A7\u306B\u306F\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u5FC5\u8981\u3067\u3059" }, 401);
@@ -950,6 +978,11 @@ var worker_default = {
         if (!snapshot || now - Date.parse(snapshot.fetchedAt) > 36e5) await refreshFleet(env.DB, now);
       } catch (e) {
         console.error("fleet refresh", e.message);
+      }
+      try {
+        await refreshLiveFormations(env.DB, now);
+      } catch (e) {
+        console.error("live formations refresh", e.message);
       }
     } else {
       const minute = Math.floor(event.scheduledTime / 6e4), lease = await env.DB.prepare(`INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)`).bind("lease:" + minute, JSON.stringify(now.toISOString())).run();

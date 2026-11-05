@@ -13,7 +13,7 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261104k">
+    <link rel="stylesheet" href="style.css?v=20261105a">
 </head>
 <body>
     <header class="app-header">
@@ -57,6 +57,10 @@
                     <button class="quick-card fleet-card" type="button" data-app-view="fleet">
                         <span class="quick-symbol">編</span>
                         <span><b>編成状況</b><small>南海・天浜線の車両一覧</small></span>
+                    </button>
+                    <button class="quick-card patterns-card" type="button" data-app-view="patterns">
+                        <span class="quick-symbol">筋</span>
+                        <span><b>特別スジ</b><small>列番ごとの経路・通過時刻</small></span>
                     </button>
                 </div>
             </div>
@@ -110,6 +114,18 @@
             <iframe id="recordsFrame" class="records-frame" title="定期外列車ログ・編成状況" loading="lazy"></iframe>
             <div id="tenhamaFleet" class="tenhama-fleet-board" aria-live="polite" hidden></div>
         </section>
+
+        <section id="patternsWorkspace" class="patterns-workspace" hidden>
+            <div class="patterns-heading">
+                <span class="eyebrow">SPECIAL TRAIN PATHS</span>
+                <h2>特別スジ一覧</h2>
+                <p>確認済みの列番について、運転目的・経路・分かっている通過時刻をまとめています。未登録の時刻は推測で補わず、そのまま表示します。</p>
+            </div>
+            <div class="patterns-legend">
+                <span>列番</span><i></i><span>運転区間</span><i></i><span>通過時刻</span>
+            </div>
+            <div id="specialPatternList" class="pattern-grid" aria-live="polite"></div>
+        </section>
     </main>
 
     <button id="detailBackdrop" class="detail-backdrop" type="button" aria-label="列車詳細を閉じる"></button>
@@ -123,11 +139,13 @@
         <button type="button" data-app-view="route"><i>│</i><span>在線</span></button>
         <button type="button" data-app-view="log"><i>!</i><span>ログ</span></button>
         <button type="button" data-app-view="fleet"><i>≡</i><span>編成</span></button>
+        <button type="button" data-app-view="patterns"><i>↝</i><span>スジ</span></button>
     </nav>
 
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
+            <section><b>Ver 1.6.0</b><p>翌日以降の通常運用が確認された編成を編成状況から自動整理。既知の試運転・臨時回送・入場回送を列番、区間、時刻で確認できる「特別スジ一覧」を追加。</p></section>
             <section><b>Ver 1.5.8</b><p>THG101の車両アイコンを実車写真と照合して再修正。丸い車体、全面黒マスク、黒い貫通扉、小形LED灯、斜めに立ち上がる3色帯、車番表示と連結器周辺を再現。</p></section>
             <section><b>Ver 1.5.7</b><p>THG101の車両アイコンを実車の前面形状に合わせて描き直し。</p></section>
             <section><b>Ver 1.5.6</b><p>編成画面に天浜線の車両一覧を追加。TH2100形・TH9200形・THG100形の15両を、車両アイコンと現在の愛称・塗装別に確認できます。</p></section>
@@ -146,8 +164,8 @@
         </div>
     </dialog>
 
-    <script src="api.js?v=20261104k"></script>
-    <script src="ui.js?v=20261104k"></script>
-    <script type="module" src="script.js?v=20261104k"></script>
+    <script src="api.js?v=20261105a"></script>
+    <script src="ui.js?v=20261105a"></script>
+    <script type="module" src="script.js?v=20261105a"></script>
 </body>
 </html>

@@ -76,8 +76,13 @@ export async function handle(request,env){
    const stale=!snapshot||!Number.isFinite(Date.parse(snapshot.fetchedAt))||Date.now()-Date.parse(snapshot.fetchedAt)>3600000;
    if(request.method==='POST'||stale)snapshot=await refreshFleet(db,new Date());
    snapshot=snapshot||{fetchedAt:null,items:[]};
+   const today=core.serviceDate(new Date());
+   let live=await read(db,`live-formations:${today}`);
+   const liveStale=!live||!Number.isFinite(Date.parse(live.fetchedAt))||Date.now()-Date.parse(live.fetchedAt)>900000;
+   if(liveStale){try{live=await refreshLiveFormations(db,new Date());}catch(e){console.error('live formations refresh',e.message);}}
+   const normalOperations=Object.values(live?.items||{}).map(item=>({formation:item.formation,serviceDate:live.serviceDate}));
    const rows=(await db.prepare(eventSelect+' ORDER BY events.last_seen DESC,events.id DESC LIMIT 500').all()).results,events=rows.map(decodeEvent).map(e=>({id:e.id,serviceDate:e.service_date,groupName:e.group_name,trainNumber:e.train_number,firstSeen:e.first_seen,lastSeen:e.last_seen,formation:e.formation,firstPosition:e.first_position,lastPosition:e.last_position,special:e.special}));
-   return json(mergeFleetStatus(snapshot,events));
+   return json(mergeFleetStatus(snapshot,events,normalOperations));
   }
   if(p.startsWith('/api/logs')){
    if(!await authorized(request,env.LOG_ACCESS_PASSWORD))return json({error:'ログ閲覧にはパスワードが必要です'},401);
@@ -126,6 +131,7 @@ export default {
   if(event.cron==='*/15 * * * *'){
    try{await refresh(env.DB,now);}catch(e){console.error('baseline refresh',e.message);await put(env.DB,'refresh',{error:e.message,attemptedAt:now.toISOString()}).run();throw e;}
    try{const snapshot=await read(env.DB,'fleet-status');if(!snapshot||now-Date.parse(snapshot.fetchedAt)>3600000)await refreshFleet(env.DB,now);}catch(e){console.error('fleet refresh',e.message);}
+   try{await refreshLiveFormations(env.DB,now);}catch(e){console.error('live formations refresh',e.message);}
   }else{
    // SQL lease avoids double processing if scheduled executions overlap.
    const minute=Math.floor(event.scheduledTime/60000),lease=await env.DB.prepare(`INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)`).bind('lease:'+minute,JSON.stringify(now.toISOString())).run();

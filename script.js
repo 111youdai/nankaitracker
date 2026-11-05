@@ -12,6 +12,7 @@ import {
     renderTenhamaFleet,
     renderTenhamaTrains
 } from "./tenhama.mjs?v=20261104k";
+import { renderSpecialPatterns } from "./special-patterns.mjs?v=20261105a";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
@@ -525,12 +526,13 @@ function setFleetSource(source) {
 
 function setAppView(view, updateHistory = true) {
     const normalizedView =
-        ["home", "route", "log", "fleet"].includes(view)
+        ["home", "route", "log", "fleet", "patterns"].includes(view)
             ? view
             : "home";
     const home = document.getElementById("home");
     const route = document.getElementById("routeWorkspace");
     const records = document.getElementById("recordsWorkspace");
+    const patterns = document.getElementById("patternsWorkspace");
     const recordsVisible =
         normalizedView === "log" ||
         normalizedView === "fleet";
@@ -538,6 +540,11 @@ function setAppView(view, updateHistory = true) {
     if (home) home.hidden = normalizedView !== "home";
     if (route) route.hidden = normalizedView !== "route";
     if (records) records.hidden = !recordsVisible;
+    if (patterns) patterns.hidden = normalizedView !== "patterns";
+
+    if (normalizedView === "patterns") {
+        renderSpecialPatterns(document.getElementById("specialPatternList"));
+    }
 
     if (recordsVisible) {
         const frame = document.getElementById("recordsFrame");
@@ -685,7 +692,7 @@ if (versionModal) {
 
 const initialHash = location.hash.replace("#", "");
 setAppView(
-    ["route", "log", "fleet"].includes(initialHash) || LINE_MODES.has(initialHash)
+    ["route", "log", "fleet", "patterns"].includes(initialHash) || LINE_MODES.has(initialHash)
         ? (LINE_MODES.has(initialHash) ? "route" : initialHash)
         : "home",
     false
