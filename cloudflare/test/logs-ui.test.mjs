@@ -8,7 +8,7 @@ async function linking(){
  const element=()=>({hidden:false,value:'',dataset:{},classList:{toggle(){}},replaceChildren(){},append(){},addEventListener(){}}),elements=new Map();
  const context={
   document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},querySelectorAll(){return [];},createElement:element},
-  sessionStorage:{getItem(){return '';},setItem(){},removeItem(){}},history:{replaceState(){}},location:{hash:''},window:{addEventListener(){}},
+  localStorage:{getItem(){return '';},setItem(){},removeItem(){}},history:{replaceState(){}},location:{hash:'',search:''},window:{addEventListener(){}},parent:{postMessage(){}},
   setInterval(){},URL,URLSearchParams,Date,Promise,AbortSignal,fetch,Blob,console
  };
  vm.runInNewContext(source+'\nglobalThis.__linking={canLink,groupRuns};',context);

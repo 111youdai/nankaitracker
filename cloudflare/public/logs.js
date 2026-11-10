@@ -1,13 +1,13 @@
 'use strict';
-const $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';
-let token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false,logsLoaded=false;
+const $=id=>document.getElementById(id),KEY='nankaiTrackerAccountToken',EMBED=new URLSearchParams(location.search).get('embed')==='1',PARENT_ORIGIN='https://111youdai.github.io';
+let token=localStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false,logsLoaded=false;
 const time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'未確認';
 const clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'時刻不明';
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 async function api(url,options={}){
  const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});
  const data=await response.json();
- if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;
+ if(!response.ok){if(response.status===401){token='';localStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;
 }
 function error(e){$('error').textContent=e.message;}
 function timelineTime(point){const start=point.timeLabel||clock(point.time),end=point.endTimeLabel||(point.endTime?clock(point.endTime):'');return end&&end!==start?`${start}〜${end}`:start;}
@@ -111,13 +111,17 @@ async function open(){
  const view=location.hash==='#fleet'?'fleet':'log';
  showView(view);
 }
-$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
+$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,password:$('password').value})});token=d.token;localStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
 $('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);
 document.querySelectorAll('[data-log-view]').forEach(button=>button.onclick=()=>showView(button.dataset.logView));$('refreshFleet').onclick=()=>loadFleet(true);
 window.addEventListener('hashchange',()=>{
  if(token)showView(location.hash==='#fleet'?'fleet':'log');
 });
-$('logout').onclick=()=>{token='';sessionStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;};
+$('logout').onclick=()=>{token='';localStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;if(EMBED)parent.postMessage({type:'nankai-tracker-logout'},PARENT_ORIGIN);};
 $('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};
 setInterval(()=>{if(token&&!document.hidden)void status();},30000);
+window.addEventListener('message',event=>{
+ if(event.origin!==PARENT_ORIGIN||event.data?.type!=='nankai-tracker-auth'||typeof event.data.token!=='string')return;
+ token=event.data.token;localStorage.setItem(KEY,token);$('error').textContent='';void open();
+});
 if(token)void open();

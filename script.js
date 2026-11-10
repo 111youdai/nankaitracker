@@ -521,7 +521,7 @@ function setFleetSource(source) {
         }
     }
     if (title) title.textContent = "編成状況";
-    if (badge) badge.textContent = "公開情報";
+    if (badge) badge.textContent = "✓ ログイン済み";
 }
 
 function setAppView(view, updateHistory = true) {
@@ -571,7 +571,7 @@ function setAppView(view, updateHistory = true) {
                 }
             }
             if (title) title.textContent = "定期外ログ";
-            if (badge) badge.textContent = "🔒 認証が必要";
+            if (badge) badge.textContent = "✓ ログイン済み";
         }
     }
 

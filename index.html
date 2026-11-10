@@ -13,9 +13,34 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261105a">
+    <link rel="stylesheet" href="style.css?v=20261110a">
 </head>
 <body>
+    <section id="authGate" class="auth-gate" aria-live="polite">
+        <div class="auth-card">
+            <div class="auth-brand"><span class="brand-mark">N</span><span><small>NANKAI TRACKER</small><strong>南海トラッカー</strong></span></div>
+            <div class="auth-copy"><span class="eyebrow">MEMBER ACCESS</span><h1>アカウントで開く</h1><p>列車位置・定期外ログ・編成状況を利用するにはログインが必要です。</p></div>
+            <div class="auth-tabs" role="tablist" aria-label="アカウント操作">
+                <button id="showLogin" class="active" type="button" role="tab">ログイン</button>
+                <button id="showRegister" type="button" role="tab">新規登録</button>
+            </div>
+            <form id="accountLogin" class="auth-form">
+                <label>メールアドレス<input id="loginEmail" type="email" autocomplete="email" required></label>
+                <label>パスワード<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+                <button type="submit">ログイン</button>
+            </form>
+            <form id="accountRegister" class="auth-form" hidden>
+                <label>表示名<input id="registerName" autocomplete="nickname" maxlength="32" required></label>
+                <label>メールアドレス<input id="registerEmail" type="email" autocomplete="email" required></label>
+                <label>パスワード<input id="registerPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required><small>10文字以上</small></label>
+                <label id="setupCodeField" hidden>初期管理者コード<input id="setupCode" type="password" autocomplete="one-time-code"></label>
+                <button type="submit">登録を申請</button>
+            </form>
+            <p id="authMessage" class="auth-message" role="status"></p>
+        </div>
+    </section>
+
+    <div id="appShell" hidden>
     <header class="app-header">
         <a class="brand" href="#home" data-app-view="home" aria-label="南海トラッカー ホーム">
             <span class="brand-mark">N</span>
@@ -23,6 +48,7 @@
         </a>
         <div class="header-actions">
             <span class="cloud-state"><i></i>位置情報を取得中</span>
+            <button id="accountBtn" class="account-button" type="button" aria-label="アカウント"><span id="accountInitial">U</span></button>
             <button id="versionBtn" class="icon-button" type="button" aria-label="更新履歴">i</button>
         </div>
     </header>
@@ -108,7 +134,7 @@
                         <button class="fleet-source-btn active" type="button" data-fleet-source="nankai" role="tab">南海系統</button>
                         <button class="fleet-source-btn" type="button" data-fleet-source="tenhama" role="tab">天浜線</button>
                     </div>
-                    <span id="recordsStatusBadge" class="records-secure">🔒 認証が必要</span>
+                    <span id="recordsStatusBadge" class="records-secure">✓ ログイン済み</span>
                 </div>
             </div>
             <iframe id="recordsFrame" class="records-frame" title="定期外列車ログ・編成状況" loading="lazy"></iframe>
@@ -145,6 +171,7 @@
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
+            <section><b>Ver 1.7.0</b><p>サイト全体にアカウント制を導入。新規登録は管理者承認制とし、管理画面から承認・拒否・利用停止が可能になりました。</p></section>
             <section><b>Ver 1.6.0</b><p>翌日以降の通常運用が確認された編成を編成状況から自動整理。既知の試運転・臨時回送・入場回送を列番、区間、時刻で確認できる「特別スジ一覧」を追加。</p></section>
             <section><b>Ver 1.5.8</b><p>THG101の車両アイコンを実車写真と照合して再修正。丸い車体、全面黒マスク、黒い貫通扉、小形LED灯、斜めに立ち上がる3色帯、車番表示と連結器周辺を再現。</p></section>
             <section><b>Ver 1.5.7</b><p>THG101の車両アイコンを実車の前面形状に合わせて描き直し。</p></section>
@@ -164,8 +191,20 @@
         </div>
     </dialog>
 
-    <script src="api.js?v=20261105a"></script>
-    <script src="ui.js?v=20261105a"></script>
-    <script type="module" src="script.js?v=20261105a"></script>
+    <dialog id="accountModal" class="account-modal">
+        <div class="version-header"><div><span class="eyebrow">ACCOUNT</span><h2>アカウント</h2></div><button id="closeAccountModal" type="button" aria-label="閉じる">×</button></div>
+        <section class="account-profile"><strong id="accountDisplayName"></strong><span id="accountEmail"></span><small id="accountRole"></small></section>
+        <section id="adminPanel" class="admin-panel" hidden>
+            <div class="admin-heading"><div><span class="eyebrow">ADMIN</span><h3>登録申請・ユーザー管理</h3></div><button id="refreshUsers" type="button">更新</button></div>
+            <div id="userList" class="user-list"></div>
+        </section>
+        <button id="accountLogout" class="account-logout" type="button">ログアウト</button>
+    </dialog>
+    </div>
+
+    <script src="api.js?v=20261110a"></script>
+    <script src="account.js?v=20261110a"></script>
+    <script src="ui.js?v=20261110a"></script>
+    <script type="module" src="script.js?v=20261110a"></script>
 </body>
 </html>

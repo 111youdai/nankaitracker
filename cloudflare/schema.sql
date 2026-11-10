@@ -6,3 +6,25 @@ CREATE TABLE IF NOT EXISTS observations(id INTEGER PRIMARY KEY,event_id INTEGER 
 CREATE INDEX IF NOT EXISTS event_day ON events(service_date,group_name,id);
 CREATE INDEX IF NOT EXISTS observation_event ON observations(event_id,id);
 CREATE INDEX IF NOT EXISTS pending_time ON pending(source_time,id);
+
+CREATE TABLE IF NOT EXISTS users(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+ display_name TEXT NOT NULL,
+ password_salt TEXT NOT NULL,
+ password_hash TEXT NOT NULL,
+ password_iterations INTEGER NOT NULL,
+ role TEXT NOT NULL CHECK(role IN ('owner','member')),
+ status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected','disabled')),
+ session_version INTEGER NOT NULL DEFAULT 1,
+ created_at TEXT NOT NULL,
+ approved_at TEXT,
+ approved_by INTEGER REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS user_status ON users(status,created_at);
+
+CREATE TABLE IF NOT EXISTS auth_limits(
+ key TEXT PRIMARY KEY,
+ attempts INTEGER NOT NULL,
+ window_start TEXT NOT NULL
+);

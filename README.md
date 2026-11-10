@@ -1,4 +1,6 @@
-# 南海トラッカー Ver 1.6.0 — 特別スジ一覧・編成状況自動整理版
+# 南海トラッカー Ver 1.7.0 — アカウント・管理者承認版
+
+Ver 1.7.0ではサイト全体をメールアドレスとパスワードによるアカウント制に変更しました。最初の1名は初期登録コードで管理者になり、2人目以降は管理者が承認してから利用できます。管理者は画面右上のアカウントメニューから申請の承認・却下・無効化を行えます。
 
 Ver 1.6.0では、既知の試運転・臨時回送・入場回送を列番、区間、通過時刻で確認できる「特別スジ一覧」を追加しました。編成状況は、翌日以降に通常運用へ入ったことを運用Hubで確認できた編成を自動で整理します（工場入場扱いは保持）。
 
@@ -18,16 +20,33 @@ Ver 1.4.0では、カード型ホーム・縦型在線表示・運用ボード�
 
 - 既存の南海トラッカー：GitHub Pagesでスマートフォン向け統合画面を公開。
 - Render：列車詳細APIのみ。南海線の閲覧認証を廃止。監視・SQLiteを起動しないので永続ディスク不要。
-- Cloudflare Worker `nankai-tracker-logger`：毎分の列車監視・ログ認証・ログ画面。
+- Cloudflare Worker `nankai-tracker-logger`：毎分の列車監視・アカウント認証・ログ画面。
 - D1 `nankai-tracker-log`：ログと照合待ちを永続保存。
 - ログ画面：https://nankai-tracker-logger.youdai-tracker.workers.dev/logs.html
-- ログ閲覧パスワードはCloudflareのSecretで管理します。リポジトリには保存しません。
+- パスワードはソルト付きハッシュとしてD1へ保存し、平文では保存しません。署名鍵・ペッパー・最初の管理者用コードはCloudflareのSecretで管理します。
 
 Worker・D1・毎分Cron、GitHubの `main`、RenderへのVer 1.3.1の反映は完了しています。今回のserver.jsはRenderの保存先設定を要求しません。RenderのBuild Commandは `npm ci`、Start Commandは `npm start` です。Node.js 22以上が必要です。
 
 `LOG_WORKER_URL` は任意です。未設定でも今回のCloudflare URLへ転送します。古い `NANKAI_ACCESS_PASSWORD`、`LOGGER_DATA_DIR`、`LOGGER_ENABLED` は新server.jsでは使用しません。
 
 以前の `logger/` と `test/` は残っていても動作に影響しません。今回の監視処理は `cloudflare/` にあり、Renderから旧loggerは読み込まれません。
+
+## アカウント
+
+- サイト全体の閲覧にログインが必要。
+- 最初の登録者だけが初期登録コードを入力し、管理者として即時承認される。
+- 2人目以降は登録後に承認待ちとなり、管理者の承認後にログインできる。
+- 管理者は申請の承認・却下、既存ユーザーの無効化・再承認が可能。
+- セッションは署名付きトークンで30日間保持。無効化時は既存セッションも失効する。
+- ログイン失敗はIPアドレスとメールアドレスの組み合わせごとに制限する。
+
+Workerで必要なSecret：
+
+```powershell
+npx wrangler secret put ACCOUNT_SESSION_SECRET
+npx wrangler secret put ACCOUNT_PASSWORD_PEPPER
+npx wrangler secret put ACCOUNT_SETUP_CODE
+```
 
 ## ログ画面
 
@@ -83,10 +102,10 @@ npm run deploy
 
 `wrangler.jsonc` には今回のアカウントID・D1 IDを設定済みで、Git管理からは除外しています。共有用テンプレートは `wrangler.example.jsonc`。
 
-`npm run deploy` は公開Workerを更新し、D1データは残します。Secretはwranglerの通常更新で保持されます。パスワードを変更する場合だけ：
+`npm run deploy` は公開Workerを更新し、D1データは残します。Secretはwranglerの通常更新で保持されます。初期登録コード等を変更する場合だけ：
 
 ```powershell
-npx wrangler secret put LOG_ACCESS_PASSWORD
+npx wrangler secret put ACCOUNT_SETUP_CODE
 ```
 
 初期基準を手動で再取得する場合：
@@ -100,7 +119,7 @@ npx wrangler d1 execute nankai-tracker-log --remote --file baseline-seed.sql
 
 ## 検証
 
-- 自動テスト21件：正常列番除外、系統分離、重複抑止、編成変更・欠損、照合障害と復旧、古い配信、処理分割、キュー追いつき、DB書込み失敗の原子性、認証、定期実行の二重処理抑止、駅名変換、軌跡補正、千代田工場判定、編成状況の統合・API・Hub更新、当日運用投稿からの編成補完、Render公開API。
+- 自動テスト33件：正常列番除外、系統分離、重複抑止、編成変更・欠損、照合障害と復旧、古い配信、処理分割、キュー追いつき、DB書込み失敗の原子性、管理者初期登録、承認待ち、承認・無効化・セッション失効、定期実行の二重処理抑止、駅名変換、軌跡補正、千代田工場判定、編成状況の統合・API・Hub更新、当日運用投稿からの編成補完、Render公開API。
 - workerd＋ローカルD1：テスト列車・実取得した通常ダイヤを用いて、定期実行→保存→認証→一覧→履歴→監視状況まで確認。
 - Wrangler公開用ビルド確認。
 - 本番にテスト列車は投入していません。

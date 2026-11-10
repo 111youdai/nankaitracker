@@ -13,9 +13,9 @@ var __commonJS = (cb, mod) => function __require() {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key2 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key2) && key2 !== except)
-        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
   }
   return to;
 };
@@ -60,11 +60,11 @@ var require_core = __commonJS({
         for (const t of op.trains) {
           if (typeof t.train_number !== "string") throw new Error("\u904B\u7528\u8868\u306E\u5217\u756A\u304C\u4E0D\u6B63\u3067\u3059");
           if (!t.line_id || /^[_.]/.test(t.train_number)) continue;
-          const key2 = numberKey2(t.train_number);
-          if (!key2) continue;
-          numbers.add(key2);
+          const key = numberKey2(t.train_number);
+          if (!key) continue;
+          numbers.add(key);
           lines.add(t.line_id);
-          if (t.line_id === "shiomibashisen") branch.add(key2);
+          if (t.line_id === "shiomibashisen") branch.add(key);
         }
       }
       if (numbers.size < 50) throw new Error("\u904B\u7528\u8868\u304C\u7A7A\u307E\u305F\u306F\u4E0D\u5B8C\u5168\u3067\u3059\u3002\u5224\u5B9A\u3092\u4FDD\u7559\u3057\u307E\u3059");
@@ -565,11 +565,11 @@ var import_core = __toESM(require_core(), 1);
 var import_fleet = __toESM(require_fleet(), 1);
 var { tableNumbers, numberKey, ignoredTrain, formation } = import_core.default;
 var { buildHubFleet } = import_fleet.default;
-var read = async (db, key2) => {
-  const r = await db.prepare("SELECT value FROM meta WHERE key=?").bind(key2).first();
+var read = async (db, key) => {
+  const r = await db.prepare("SELECT value FROM meta WHERE key=?").bind(key).first();
   return r ? JSON.parse(r.value) : null;
 };
-var put = (db, key2, v) => db.prepare("INSERT OR REPLACE INTO meta VALUES (?,?)").bind(key2, JSON.stringify(v));
+var put = (db, key, v) => db.prepare("INSERT OR REPLACE INTO meta VALUES (?,?)").bind(key, JSON.stringify(v));
 async function requestJson(url, options = {}) {
   const r = await fetch(url, { ...options, signal: AbortSignal.timeout(2e4) });
   if (!r.ok) throw Error(`\u53D6\u5F97\u5931\u6557 HTTP ${r.status}`);
@@ -708,8 +708,8 @@ async function classify(db, row, b, maxCandidates = 10) {
   const p = JSON.parse(row.payload), remaining = [], statements = [];
   let count = 0;
   for (const t of p.trains) {
-    const key2 = numberKey(t.train_number);
-    if (!key2 || ignoredTrain(key2) || b.numbers[row.group_name].has(key2)) continue;
+    const key = numberKey(t.train_number);
+    if (!key || ignoredTrain(key) || b.numbers[row.group_name].has(key)) continue;
     if (count++ >= maxCandidates) {
       remaining.push(t);
       continue;
@@ -719,8 +719,8 @@ async function classify(db, row, b, maxCandidates = 10) {
   ON CONFLICT(service_date,group_name,train_key) DO UPDATE SET
    first_seen=MIN(events.first_seen,excluded.first_seen),last_seen=MAX(events.last_seen,excluded.last_seen),
    formation=CASE WHEN (excluded.last_seen>=events.last_seen AND json_extract(excluded.formation,'$.verified')=1) OR json_extract(events.formation,'$.verified')=0 THEN excluded.formation ELSE events.formation END,
-   last_payload=CASE WHEN excluded.last_seen>=events.last_seen THEN excluded.last_payload ELSE events.last_payload END`).bind(row.service_date, row.group_name, key2, String(t.train_number), row.source_time, row.source_time, form, JSON.stringify(b.sources), raw));
-    statements.push(db.prepare(`INSERT OR IGNORE INTO observations(event_id,source_time,observed_at,payload) SELECT id,?,?,? FROM events WHERE service_date=? AND group_name=? AND train_key=?`).bind(row.source_time, p.observedAt, raw, row.service_date, row.group_name, key2));
+   last_payload=CASE WHEN excluded.last_seen>=events.last_seen THEN excluded.last_payload ELSE events.last_payload END`).bind(row.service_date, row.group_name, key, String(t.train_number), row.source_time, row.source_time, form, JSON.stringify(b.sources), raw));
+    statements.push(db.prepare(`INSERT OR IGNORE INTO observations(event_id,source_time,observed_at,payload) SELECT id,?,?,? FROM events WHERE service_date=? AND group_name=? AND train_key=?`).bind(row.source_time, p.observedAt, raw, row.service_date, row.group_name, key));
   }
   statements.push(remaining.length ? db.prepare("UPDATE pending SET payload=? WHERE id=?").bind(JSON.stringify({ ...p, trains: remaining }), row.id) : db.prepare("DELETE FROM pending WHERE id=?").bind(row.id));
   await db.batch(statements);
@@ -769,33 +769,235 @@ async function poll(db, now, request = requestJson) {
   return status;
 }
 
-// auth.mjs
-var enc = new TextEncoder();
+// accounts.mjs
+var encoder = new TextEncoder();
+var decoder = new TextDecoder();
+var PASSWORD_ITERATIONS = 6e3;
+var SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1e3;
+var MAIN_ORIGIN = "https://111youdai.github.io";
+var LOCAL_ORIGINS = /* @__PURE__ */ new Set(["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8787", "http://127.0.0.1:8787"]);
 var b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-var un64 = (s) => Uint8Array.from(atob(s.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
-async function key(password) {
-  return crypto.subtle.importKey("raw", enc.encode(password), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+var un64 = (value) => Uint8Array.from(atob(value.replaceAll("-", "+").replaceAll("_", "/")), (character) => character.charCodeAt(0));
+var normalizeEmail = (value) => String(value || "").trim().normalize("NFKC").toLowerCase();
+var normalizeName = (value) => String(value || "").trim().normalize("NFKC").replace(/\s+/g, " ");
+function allowedOrigin(request) {
+  const origin = request.headers.get("Origin") || "";
+  return origin === MAIN_ORIGIN || LOCAL_ORIGINS.has(origin) ? origin : "";
 }
-async function issue(password) {
-  const p = b64(enc.encode(JSON.stringify({ scope: "cloudflare-logs-v1", exp: Date.now() + 432e5, nonce: crypto.randomUUID() })));
-  return p + "." + b64(await crypto.subtle.sign("HMAC", await key(password), enc.encode(p)));
+function corsHeaders(request) {
+  const origin = allowedOrigin(request), headers = {
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json;charset=UTF-8",
+    "Vary": "Origin",
+    "X-Content-Type-Options": "nosniff"
+  };
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
+    headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+    headers["Access-Control-Max-Age"] = "86400";
+  }
+  return headers;
 }
-async function authorized(request, password) {
-  if (!password) return false;
+var accountJson = (request, value, status = 200) => new Response(JSON.stringify(value), { status, headers: corsHeaders(request) });
+async function readJson(request, limit = 4096) {
+  const body = await request.text();
+  if (body.length > limit) throw Object.assign(new Error("\u30EA\u30AF\u30A8\u30B9\u30C8\u304C\u5927\u304D\u3059\u304E\u307E\u3059"), { status: 413 });
   try {
-    const m = (request.headers.get("Authorization") || "").match(/^Bearer ([\w-]+)\.([\w-]+)$/i);
-    if (!m) return false;
-    if (!await crypto.subtle.verify("HMAC", await key(password), un64(m[2]), enc.encode(m[1]))) return false;
-    const p = JSON.parse(new TextDecoder().decode(un64(m[1])));
-    return p.scope === "cloudflare-logs-v1" && Number.isFinite(p.exp) && p.exp > Date.now();
+    return JSON.parse(body || "{}");
+  } catch {
+    throw Object.assign(new Error("\u5165\u529B\u5185\u5BB9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044"), { status: 400 });
+  }
+}
+async function importPasswordKey(password, pepper = "") {
+  return crypto.subtle.importKey("raw", encoder.encode(`${password}\0${pepper}`), "PBKDF2", false, ["deriveBits"]);
+}
+async function derivePassword(password, salt, iterations = PASSWORD_ITERATIONS, pepper = "") {
+  const key = await importPasswordKey(password, pepper);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
+}
+async function safeEqual(left, right) {
+  try {
+    const data = encoder.encode("nankai-tracker-auth");
+    const expectedKey = await crypto.subtle.importKey("raw", left, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const actualKey = await crypto.subtle.importKey("raw", right, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const signature = await crypto.subtle.sign("HMAC", expectedKey, data);
+    return crypto.subtle.verify("HMAC", actualKey, signature, data);
   } catch {
     return false;
   }
 }
-async function samePassword(a, b) {
-  if (typeof a !== "string" || typeof b !== "string" || !b) return false;
-  const k = await key(b), msg = enc.encode("login");
-  return crypto.subtle.verify("HMAC", k, await crypto.subtle.sign("HMAC", await key(a || "\0"), msg), msg);
+async function passwordRecord(password, pepper = "") {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await derivePassword(password, salt, PASSWORD_ITERATIONS, pepper);
+  return { salt: b64(salt), hash: b64(hash), iterations: PASSWORD_ITERATIONS };
+}
+async function verifyPassword(password, user, pepper = "") {
+  if (typeof password !== "string" || !user?.password_salt || !user?.password_hash) return false;
+  const actual = await derivePassword(password, un64(user.password_salt), Number(user.password_iterations) || PASSWORD_ITERATIONS, pepper);
+  return safeEqual(un64(user.password_hash), actual);
+}
+async function hmacKey(secret) {
+  return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+}
+async function sameSecret(left, right) {
+  if (typeof left !== "string" || typeof right !== "string" || !right) return false;
+  const data = encoder.encode("owner-setup");
+  const expected = await crypto.subtle.sign("HMAC", await hmacKey(right), data);
+  return crypto.subtle.verify("HMAC", await hmacKey(left || "\0"), expected, data);
+}
+async function issueAccountToken(user, secret) {
+  if (!secret) throw new Error("ACCOUNT_SESSION_SECRET\u304C\u672A\u8A2D\u5B9A\u3067\u3059");
+  const payload = b64(encoder.encode(JSON.stringify({
+    scope: "nankai-tracker-account-v1",
+    sub: Number(user.id),
+    ver: Number(user.session_version) || 1,
+    exp: Date.now() + SESSION_LIFETIME_MS,
+    nonce: crypto.randomUUID()
+  })));
+  const signature = b64(await crypto.subtle.sign("HMAC", await hmacKey(secret), encoder.encode(payload)));
+  return `${payload}.${signature}`;
+}
+async function tokenPayload(request, secret) {
+  if (!secret) return null;
+  try {
+    const match = (request.headers.get("Authorization") || "").match(/^Bearer ([\w-]+)\.([\w-]+)$/i);
+    if (!match) return null;
+    const valid = await crypto.subtle.verify("HMAC", await hmacKey(secret), un64(match[2]), encoder.encode(match[1]));
+    if (!valid) return null;
+    const payload = JSON.parse(decoder.decode(un64(match[1])));
+    if (payload.scope !== "nankai-tracker-account-v1" || !Number.isSafeInteger(payload.sub) || !Number.isFinite(payload.exp) || payload.exp <= Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+var publicUser = (user) => ({
+  id: Number(user.id),
+  email: user.email,
+  displayName: user.display_name,
+  role: user.role,
+  status: user.status,
+  createdAt: user.created_at,
+  approvedAt: user.approved_at || null
+});
+async function authenticateAccount(request, env) {
+  const payload = await tokenPayload(request, env.ACCOUNT_SESSION_SECRET);
+  if (!payload) return null;
+  const user = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(payload.sub).first();
+  if (!user || user.status !== "approved" || Number(user.session_version) !== Number(payload.ver)) return null;
+  return user;
+}
+async function rateKey(request, email) {
+  const address = request.headers.get("CF-Connecting-IP") || "local";
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(`${address}|${email}`));
+  return b64(digest);
+}
+async function loginAllowed(db, key, now) {
+  const row = await db.prepare("SELECT * FROM auth_limits WHERE key=?").bind(key).first();
+  if (!row) return true;
+  const started = Date.parse(row.window_start), fresh = Number.isFinite(started) && now - started < 15 * 60 * 1e3;
+  return !fresh || Number(row.attempts) < 10;
+}
+async function failedLogin(db, key, now) {
+  const stamp = new Date(now).toISOString();
+  await db.prepare(`INSERT INTO auth_limits(key,attempts,window_start) VALUES (?,1,?)
+  ON CONFLICT(key) DO UPDATE SET
+   attempts=CASE WHEN julianday(?) - julianday(window_start) >= (15.0/1440.0) THEN 1 ELSE attempts+1 END,
+   window_start=CASE WHEN julianday(?) - julianday(window_start) >= (15.0/1440.0) THEN excluded.window_start ELSE window_start END`).bind(key, stamp, stamp, stamp).run();
+}
+async function clearLoginLimit(db, key) {
+  await db.prepare("DELETE FROM auth_limits WHERE key=?").bind(key).run();
+}
+async function ownerCount(db) {
+  return Number((await db.prepare("SELECT COUNT(*) AS n FROM users WHERE role='owner'").first())?.n || 0);
+}
+function validateRegistration(data) {
+  const email = normalizeEmail(data.email), displayName = normalizeName(data.displayName), password = String(data.password || "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160) throw Object.assign(new Error("\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044"), { status: 400 });
+  if (displayName.length < 1 || displayName.length > 32) throw Object.assign(new Error("\u8868\u793A\u540D\u306F1\u301C32\u6587\u5B57\u3067\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044"), { status: 400 });
+  if (password.length < 10 || password.length > 128) throw Object.assign(new Error("\u30D1\u30B9\u30EF\u30FC\u30C9\u306F10\u301C128\u6587\u5B57\u3067\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044"), { status: 400 });
+  return { email, displayName, password };
+}
+async function register(request, env) {
+  if (request.method !== "POST") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+  const data = await readJson(request), input = validateRegistration(data), firstOwner = await ownerCount(env.DB) === 0;
+  if (firstOwner) {
+    if (!env.ACCOUNT_SETUP_CODE) return accountJson(request, { error: "\u521D\u671F\u7BA1\u7406\u8005\u30B3\u30FC\u30C9\u304C\u672A\u8A2D\u5B9A\u3067\u3059" }, 503);
+    if (!await sameSecret(String(data.setupCode || ""), env.ACCOUNT_SETUP_CODE)) return accountJson(request, { error: "\u521D\u671F\u7BA1\u7406\u8005\u30B3\u30FC\u30C9\u304C\u9055\u3044\u307E\u3059" }, 401);
+  }
+  const password = await passwordRecord(input.password, env.ACCOUNT_PASSWORD_PEPPER || env.ACCOUNT_SESSION_SECRET), now = (/* @__PURE__ */ new Date()).toISOString(), role = firstOwner ? "owner" : "member", status = firstOwner ? "approved" : "pending";
+  try {
+    await env.DB.prepare("INSERT INTO users(email,display_name,password_salt,password_hash,password_iterations,role,status,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(input.email, input.displayName, password.salt, password.hash, password.iterations, role, status, now, firstOwner ? now : null).run();
+    const user = await env.DB.prepare("SELECT * FROM users WHERE email=? COLLATE NOCASE").bind(input.email).first();
+    if (firstOwner) {
+      const token = await issueAccountToken(user, env.ACCOUNT_SESSION_SECRET);
+      return accountJson(request, { ok: true, approved: true, token, expiresIn: SESSION_LIFETIME_MS / 1e3, user: publicUser(user) }, 201);
+    }
+    return accountJson(request, { ok: true, approved: false, message: "\u767B\u9332\u7533\u8ACB\u3092\u53D7\u3051\u4ED8\u3051\u307E\u3057\u305F\u3002\u7BA1\u7406\u8005\u306E\u627F\u8A8D\u3092\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\u3002" }, 201);
+  } catch (error) {
+    if (/UNIQUE/i.test(error.message)) return accountJson(request, { error: "\u3053\u306E\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\u306F\u767B\u9332\u6E08\u307F\u3067\u3059" }, 409);
+    throw error;
+  }
+}
+async function login(request, env) {
+  if (request.method !== "POST") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+  const data = await readJson(request), email = normalizeEmail(data.email), password = String(data.password || ""), key = await rateKey(request, email), now = Date.now();
+  if (!await loginAllowed(env.DB, key, now)) return accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u8A66\u884C\u304C\u591A\u3059\u304E\u307E\u3059\u300215\u5206\u307B\u3069\u5F85\u3063\u3066\u304F\u3060\u3055\u3044" }, 429);
+  const user = await env.DB.prepare("SELECT * FROM users WHERE email=? COLLATE NOCASE").bind(email).first();
+  if (!user || !await verifyPassword(password, user, env.ACCOUNT_PASSWORD_PEPPER || env.ACCOUNT_SESSION_SECRET)) {
+    await failedLogin(env.DB, key, now);
+    return accountJson(request, { error: "\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\u307E\u305F\u306F\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u9055\u3044\u307E\u3059" }, 401);
+  }
+  if (user.status === "pending") return accountJson(request, { error: "\u3053\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u7BA1\u7406\u8005\u306E\u627F\u8A8D\u5F85\u3061\u3067\u3059" }, 403);
+  if (user.status !== "approved") return accountJson(request, { error: "\u3053\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u73FE\u5728\u5229\u7528\u3067\u304D\u307E\u305B\u3093" }, 403);
+  await clearLoginLimit(env.DB, key);
+  const token = await issueAccountToken(user, env.ACCOUNT_SESSION_SECRET);
+  return accountJson(request, { ok: true, token, expiresIn: SESSION_LIFETIME_MS / 1e3, user: publicUser(user) });
+}
+async function me(request, env) {
+  if (request.method !== "GET") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+  const user = await authenticateAccount(request, env);
+  return user ? accountJson(request, { user: publicUser(user) }) : accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+}
+async function adminUsers(request, env) {
+  const owner = await authenticateAccount(request, env);
+  if (!owner) return accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+  if (owner.role !== "owner") return accountJson(request, { error: "\u7BA1\u7406\u8005\u6A29\u9650\u304C\u5FC5\u8981\u3067\u3059" }, 403);
+  if (request.method === "GET") {
+    const rows = (await env.DB.prepare("SELECT id,email,display_name,role,status,created_at,approved_at FROM users ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC").all()).results;
+    return accountJson(request, { items: rows.map(publicUser) });
+  }
+  const match = new URL(request.url).pathname.match(/^\/api\/account\/admin\/users\/(\d+)$/);
+  if (request.method === "POST" && match) {
+    const id = Number(match[1]);
+    if (id === Number(owner.id)) return accountJson(request, { error: "\u81EA\u5206\u81EA\u8EAB\u306E\u72B6\u614B\u306F\u5909\u66F4\u3067\u304D\u307E\u305B\u3093" }, 400);
+    const data = await readJson(request), status = String(data.status || "");
+    if (!["approved", "rejected", "disabled"].includes(status)) return accountJson(request, { error: "\u72B6\u614B\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
+    const target = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(id).first();
+    if (!target) return accountJson(request, { error: "\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    await env.DB.prepare("UPDATE users SET status=?,approved_at=?,approved_by=?,session_version=session_version+1 WHERE id=?").bind(status, status === "approved" ? now : null, status === "approved" ? owner.id : null, id).run();
+    return accountJson(request, { ok: true, status });
+  }
+  return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+}
+async function handleAccountRequest(request, env) {
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith("/api/account/")) return null;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+  try {
+    if (path === "/api/account/setup-status" && request.method === "GET") return accountJson(request, { needsOwner: await ownerCount(env.DB) === 0 });
+    if (path === "/api/account/register") return register(request, env);
+    if (path === "/api/account/login") return login(request, env);
+    if (path === "/api/account/me") return me(request, env);
+    if (path === "/api/account/admin/users" || /^\/api\/account\/admin\/users\/\d+$/.test(path)) return adminUsers(request, env);
+    return accountJson(request, { error: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "account_request_failed", path, message: error.message }));
+    const status = error.status || 500;
+    return accountJson(request, { error: status < 500 ? error.message || "\u5165\u529B\u5185\u5BB9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044" : "\u30A2\u30AB\u30A6\u30F3\u30C8\u51E6\u7406\u306B\u5931\u6557\u3057\u307E\u3057\u305F" }, status);
+  }
 }
 
 // worker.mjs
@@ -853,6 +1055,8 @@ var eventSelect = `SELECT events.*,
 async function handle(request, env) {
   const u = new URL(request.url), p = u.pathname, db = env.DB;
   try {
+    const accountResponse = await handleAccountRequest(request, env);
+    if (accountResponse) return accountResponse;
     if (p === "/api/live-formations") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Max-Age": "86400" } });
       if (request.method !== "GET") return publicJson({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
@@ -868,21 +1072,8 @@ async function handle(request, env) {
       }
       return publicJson({ fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), items });
     }
-    if (p === "/api/auth/logs" && request.method === "POST") {
-      if (!env.LOG_ACCESS_PASSWORD) return json({ error: "Cloudflare\u306B\u30ED\u30B0\u7528\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u672A\u8A2D\u5B9A\u3067\u3059" }, 503);
-      const body = await request.text();
-      if (body.length > 1024) return json({ error: "\u30EA\u30AF\u30A8\u30B9\u30C8\u304C\u5927\u304D\u3059\u304E\u307E\u3059" }, 413);
-      let data;
-      try {
-        data = JSON.parse(body);
-      } catch {
-        return json({ error: "JSON\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
-      }
-      if (!await samePassword(data.password, env.LOG_ACCESS_PASSWORD)) return json({ error: "\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u9055\u3044\u307E\u3059" }, 401);
-      return json({ ok: true, token: await issue(env.LOG_ACCESS_PASSWORD), expires_in: 43200 });
-    }
     if (p === "/api/fleet-status") {
-      if (!await authorized(request, env.LOG_ACCESS_PASSWORD)) return json({ error: "\u7DE8\u6210\u72B6\u6CC1\u8868\u306E\u95B2\u89A7\u306B\u306F\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+      if (!await authenticateAccount(request, env)) return json({ error: "\u7DE8\u6210\u72B6\u6CC1\u8868\u306E\u95B2\u89A7\u306B\u306F\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
       if (!["GET", "POST"].includes(request.method)) return json({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
       let snapshot = await read(db, "fleet-status");
       const stale = !snapshot || !Number.isFinite(Date.parse(snapshot.fetchedAt)) || Date.now() - Date.parse(snapshot.fetchedAt) > 36e5;
@@ -903,7 +1094,7 @@ async function handle(request, env) {
       return json(mergeFleetStatus(snapshot, events, normalOperations));
     }
     if (p.startsWith("/api/logs")) {
-      if (!await authorized(request, env.LOG_ACCESS_PASSWORD)) return json({ error: "\u30ED\u30B0\u95B2\u89A7\u306B\u306F\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+      if (!await authenticateAccount(request, env)) return json({ error: "\u30ED\u30B0\u95B2\u89A7\u306B\u306F\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
       if (request.method !== "GET") return json({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
       if (p === "/api/logs/status") {
         const s = await read(db, "monitor") || { intervalSeconds: 60, groups: {}, lastSuccess: null };
@@ -1024,7 +1215,7 @@ html.embed body{padding-bottom:0;background:transparent}html.embed .app-header,h
 <header class="app-header"><a class="brand" href="https://111youdai.github.io/nankaitracker/"><span class="brand-mark">N</span><span><small>NANKAI TRACKER</small><strong>\u904B\u7528\u8A18\u9332</strong></span></a><a class="home-link" href="https://111youdai.github.io/nankaitracker/">\u30C8\u30E9\u30C3\u30AB\u30FC\u3078\u623B\u308B</a></header>
 <div class="page">
 <section class="hero"><div><span class="eyebrow">OPERATION RECORDS</span><h1>\u5217\u8ECA\u3068\u7DE8\u6210\u306E\u8A18\u9332</h1><p>\u901A\u5E38\u30C0\u30A4\u30E4\u306B\u306A\u3044\u5217\u8ECA\u306E\u78BA\u8A8D\u5C65\u6B74\u3068\u3001\u5343\u4EE3\u7530\u5165\u51FA\u5834\u30FB\u7559\u7F6E\u306A\u3069\u306E\u7DE8\u6210\u72B6\u6CC1\u3092\u307E\u3068\u3081\u307E\u3059\u3002</p></div></section>
-<section class="panel" id="loginPanel"><div class="login-copy"><span class="eyebrow">PRIVATE RECORDS</span><h2>\u30ED\u30B0\u3092\u958B\u304F</h2><p class="muted">\u95B2\u89A7\u306B\u306F\u30D1\u30B9\u30EF\u30FC\u30C9\u304C\u5FC5\u8981\u3067\u3059\u3002</p></div><form id="login"><label>\u30ED\u30B0\u95B2\u89A7\u30D1\u30B9\u30EF\u30FC\u30C9<input id="password" type="password" required autocomplete="current-password"></label><button>\u8A8D\u8A3C\u3057\u3066\u958B\u304F</button></form></section>
+<section class="panel" id="loginPanel"><div class="login-copy"><span class="eyebrow">MEMBER ACCESS</span><h2>\u30A2\u30AB\u30A6\u30F3\u30C8\u3067\u958B\u304F</h2><p class="muted">\u5357\u6D77\u30C8\u30E9\u30C3\u30AB\u30FC\u306E\u627F\u8A8D\u6E08\u307F\u30A2\u30AB\u30A6\u30F3\u30C8\u3067\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u304F\u3060\u3055\u3044\u3002</p></div><form id="login"><label>\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9<input id="email" type="email" required autocomplete="email"></label><label>\u30D1\u30B9\u30EF\u30FC\u30C9<input id="password" type="password" required autocomplete="current-password"></label><button>\u30ED\u30B0\u30A4\u30F3</button></form></section>
 <div id="error" role="alert"></div>
 <main id="main" hidden>
 <div class="panel" id="status" role="status">\u76E3\u8996\u72B6\u6CC1\u3092\u78BA\u8A8D\u4E2D\u2026</div>
@@ -1038,7 +1229,7 @@ html.embed body{padding-bottom:0;background:transparent}html.embed .app-header,h
 <script src="logs.js"><\/script>
 </body>
 </html>
-`, "/logs.js": "'use strict';\nconst $=id=>document.getElementById(id),KEY='nankaiTrackerCloudLogToken';\nlet token=sessionStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false,logsLoaded=false;\nconst time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'\u672A\u78BA\u8A8D';\nconst clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'\u6642\u523B\u4E0D\u660E';\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nasync function api(url,options={}){\n const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});\n const data=await response.json();\n if(!response.ok){if(response.status===401){token='';sessionStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;\n}\nfunction error(e){$('error').textContent=e.message;}\nfunction timelineTime(point){const start=point.timeLabel||clock(point.time),end=point.endTimeLabel||(point.endTime?clock(point.endTime):'');return end&&end!==start?`${start}\u301C${end}`:start;}\nfunction timelineView(timeline){\n const box=el('section',undefined,'timeline');box.append(el('h3','\u63A8\u5B9A\u901A\u904E\u6642\u523B'));\n if(!timeline?.available){box.append(el('p','\u3053\u306E\u8A18\u9332\u306F\u3001\u8DDD\u96E2\u8A08\u7B97\u306B\u5FC5\u8981\u306A\u4F4D\u7F6E\u304C\u307E\u3060\u8DB3\u308A\u307E\u305B\u3093\u3002','muted'));return box;}\n const summary=el('div',undefined,'timeline-summary');summary.append(el('span',`\u8A18\u9332\u533A\u9593 ${timeline.distanceKm} km`),el('span',`\u5E73\u5747 ${timeline.averageSpeedKmh} km/h`));box.append(summary);\n const list=el('ol',undefined,'timeline-list');for(const point of timeline.points){const row=el('li'),when=el('time',timelineTime(point)),station=el('span',point.station+'\u99C5'),kind=el('small',point.kind==='observed'?'\u5B9F\u6E2C':point.kind==='known'?'\u65E2\u77E5\u6642\u523B':'\u63A8\u5B9A','timeline-kind '+point.kind);row.append(when,station,kind);if(point.note)row.title=point.note;list.append(row);}box.append(list,el('p',timeline.note,'timeline-note'));return box;\n}\nfunction showView(name){\n const fleet=name==='fleet';$('logView').hidden=fleet;$('fleetView').hidden=!fleet;\n document.querySelectorAll('[data-log-view]').forEach(button=>button.classList.toggle('active',button.dataset.logView===(fleet?'fleet':'log')));\n history.replaceState(null,'',fleet?'#fleet':'#log');\n if(fleet&&!fleetLoaded)void loadFleet();\n if(!fleet&&!logsLoaded)void load();\n}\nasync function status(){\n try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'\u30AF\u30E9\u30A6\u30C9\u3067\u76E3\u8996\u4E2D':'\u76E3\u8996\u30FB\u7167\u5408\u306E\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044'));\n box.append(el('p',`\u6700\u7D42\u53D6\u5F97\uFF1A${time(s.lastSuccess)} \uFF0F \u53D6\u5F97\u9593\u9694\uFF1A${s.intervalSeconds}\u79D2 \uFF0F \u7167\u5408\u5F85\u3061\uFF1A${s.pending}\u4EF6`));\n for(const [g,v] of Object.entries(s.groups))box.append(el('div',`${g==='nankai'?'\u5357\u6D77\u7DDA':'\u9AD8\u91CE\u7DDA'}\uFF1A${v.error||`\u914D\u4FE1\u6642\u523B ${time(v.sourceTime)}\u30FB${v.trainCount}\u5217\u8ECA`}`));\n if(s.refresh?.error)box.append(el('p','\u904B\u7528\u8868\u306E\u66F4\u65B0\u306B\u5931\u6557\uFF1A'+s.refresh.error,'error'));\n if(s.feedError||s.baselineError)box.append(el('p',[s.feedError,s.baselineError].filter(Boolean).join(' / '),'error'));\n if(s.baseline)box.append(el('small',`\u7167\u5408\u30C7\u30FC\u30BF\u66F4\u65B0\uFF1A${time(s.baseline.fetchedAt)}\u3002\u753B\u9762\u3092\u9589\u3058\u3066\u3082\u3001Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3092\u7D99\u7D9A\u3057\u307E\u3059\u3002`));\n }catch(e){$('status').className='panel';$('status').textContent='\u76E3\u8996\u72B6\u6CC1\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002\u76E3\u8996\u4E2D\u304B\u3069\u3046\u304B\u78BA\u8A8D\u3067\u304D\u306A\u3044\u72B6\u614B\u3067\u3059\u3002';error(e);}\n}\nasync function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}\nconst trainKey=value=>String(value??'').normalize('NFKC').replace(/^0+(?=\\d)/,'');\nconst atNamba=position=>/\u306A\u3093\u3070/.test(`${position?.current||''} ${position?.text||''}`);\nfunction formationKey(event){\n const formation=event.formation;\n return formation?.verified&&!/\u672A\u78BA\u8A8D/.test(formation.text||'')?String(formation.text).replace(/\\s+/g,'').toUpperCase():'';\n}\nfunction canLink(first,second){\n if(first.service_date!==second.service_date||!atNamba(first.last_position)||!atNamba(second.first_position))return false;\n const gap=Date.parse(second.first_seen)-Date.parse(first.last_seen);\n if(!Number.isFinite(gap)||gap < -120000||gap > 45*60000)return false;\n const explicit=trainKey(first.train_number)==='8450'&&['8673','8070'].includes(trainKey(second.train_number)),a=formationKey(first),b=formationKey(second);\n return explicit?(!a||!b||a===b):!!a&&a===b;\n}\nfunction groupRuns(items){\n const ordered=[...items].sort((a,b)=>Date.parse(a.first_seen)-Date.parse(b.first_seen)||a.id-b.id),used=new Set(),groups=[];\n for(const event of ordered){\n  if(used.has(event.id))continue;\n  const chain=[event];used.add(event.id);\n  while(true){const next=ordered.find(candidate=>!used.has(candidate.id)&&canLink(chain.at(-1),candidate));if(!next)break;chain.push(next);used.add(next.id);}\n  groups.push(chain);\n }\n return groups.sort((a,b)=>Math.max(...b.map(x=>x.id))-Math.max(...a.map(x=>x.id)));\n}\nfunction chainRange(events){const first=events[0],last=events.at(-1);return `${first.display_range?.first||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093'} \u2192 ${last.display_range?.last||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093'}`;}\nfunction chainGroups(events){return [...new Set(events.map(event=>event.group_name==='nankai'?'\u5357\u6D77\u7DDA\u7CFB\u7D71':'\u9AD8\u91CE\u7DDA\u7CFB\u7D71'))].join(' \u2192 ');}\nfunction verifiedFormation(events){return [...events].reverse().find(event=>formationKey(event))?.formation?.text||events.at(-1).formation?.text||'\u7DE8\u6210\u672A\u78BA\u8A8D';}\nfunction appendHistory(history,event,data,result,linked){\n if(linked)history.append(el('h3',`${event.train_number}\u5217\u8ECA`,'segment-title'));\n history.append(timelineView(result.timeline));\n const observations=el('details',undefined,'observation-group');observations.append(el('summary',`\u5728\u7DDA\u5C65\u6B74 ${data.length}\u4EF6\uFF08\u958B\u304F\uFF09`));\n const observationList=el('div',undefined,'observation-list');\n for(const observation of data){const row=el('details'),where=observation.position?.text||'\u4F4D\u7F6E\u4E0D\u660E';row.append(el('summary',`${clock(observation.source_time)}\u3000${where}`),el('pre',JSON.stringify(observation.payload,null,2)));observationList.append(row);}\n observations.append(observationList);history.append(observations);\n const baseline=el('details');baseline.append(el('summary','\u7167\u5408\u3057\u305F\u904B\u7528\u8868'),el('pre',JSON.stringify(event.baseline,null,2)));history.append(baseline);\n}\nfunction card(input){\n const events=Array.isArray(input)?input:[input],e=events[0],lastEvent=events.at(-1),linked=events.length>1,known=lastEvent.special||e.special,a=el('article',undefined,linked?'linked-card':''),top=el('div',undefined,'top'),numbers=events.map(event=>`${event.train_number}\u5217\u8ECA`).join(' \u2192 ');\n top.append(el('h2',numbers),el('span',linked?'\u4E00\u9023\u306E\u904B\u8EE2':known?.label||'\u5B9A\u671F\u5916\u5019\u88DC','tag'+(known||linked?' known':'')));a.append(top);\n if(linked){\n  const explicit=trainKey(e.train_number)==='8450'&&['8673','8070'].includes(trainKey(lastEvent.train_number)),box=el('div',undefined,'known-service chain-service');\n  box.append(el('strong',explicit?'\u5343\u4EE3\u7530\u5165\u5834\u56DE\u9001':'\u306A\u3093\u3070\u6298\u8FD4\u3057\u3092\u542B\u3080\u4E00\u9023\u306E\u904B\u8EE2'),el('div','\u5217\u756A\uFF1A'+numbers),el('div','\u904B\u8EE2\u533A\u9593\uFF1A'+chainRange(events)),el('small','\u540C\u4E00\u7DE8\u6210\u30FB\u306A\u3093\u3070\u3067\u306E\u6298\u8FD4\u3057\u30FB\u524D\u5F8C\u306E\u78BA\u8A8D\u6642\u523B\u304B\u3089\u4E00\u9023\u306E\u904B\u8EE2\u3068\u3057\u3066\u307E\u3068\u3081\u3066\u3044\u307E\u3059\u3002'));a.append(box);\n }else if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','\u533A\u9593\uFF1A'+known.route));if(known.schedule)box.append(el('div','\u6642\u523B\uFF1A'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}\n const details=el('div',undefined,'details'),rows=[['\u7DE8\u6210\uFF08\u6700\u5F8C\u306B\u691C\u8A3C\u3067\u304D\u305F\u5024\uFF09',verifiedFormation(events)],['\u904B\u884C\u65E5\u30FB\u7CFB\u7D71',`${e.service_date} \uFF0F ${chainGroups(events)}`],['\u521D\u56DE \u2192 \u6700\u7D42\u78BA\u8A8D',`${time(e.first_seen)} \u2192 ${time(lastEvent.last_seen)}`],['\u63A8\u5B9A\u3057\u305F\u904B\u8EE2\u533A\u9593',chainRange(events)],['\u6700\u7D42\u78BA\u8A8D\u5730\u70B9',lastEvent.display_range?.last||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093']];\n if(linked)rows.splice(1,0,['\u5217\u756A\u306E\u3064\u306A\u304C\u308A',numbers]);\n for(const [label,value] of rows){const cell=el('div',label,'muted');cell.append(el('b',value));details.append(cell);}a.append(details);\n const button=el('button',linked?'\u5404\u5217\u8ECA\u306E\u63A8\u5B9A\u6642\u523B\u30FB\u5728\u7DDA\u5C65\u6B74':'\u63A8\u5B9A\u6642\u523B\u30FB\u5728\u7DDA\u5C65\u6B74'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);\n button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const results=await Promise.all(events.map(async event=>({event,data:await allHistory(event.id),result:await api(`/api/logs/${event.id}/timeline`)})));history.replaceChildren();for(const item of results)appendHistory(history,item.event,item.data,item.result,linked);history.hidden=false;}catch(exception){error(exception);}finally{button.disabled=false;}};\n return a;\n}\nasync function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{\n if(reset){params=new URLSearchParams({date:$('date').value,group:$('group').value,q:$('query').value});next=null;}\n const query=new URLSearchParams(params);if(next)query.set('before',next);\n const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const group of groupRuns(data.items))$('events').append(card(group));\n if(reset&&!data.items.length)$('events').append(el('p','\u8A72\u5F53\u3059\u308B\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u76E3\u8996\u958B\u59CB\u524D\u306E\u5C65\u6B74\u306F\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002'));\n if(reset)logsLoaded=true;\n next=data.next;$('more').hidden=!next;await status();\n }catch(e){error(e);}finally{busy=false;}}\nconst categoryOrder=['6\u4E21\uFF08\u56FA\u5B9A\uFF09','4\u4E21\uFF08\u56FA\u5B9A\uFF09','2\u4E21\uFF08\u56FA\u5B9A\uFF09','\u7279\u6025\u8ECA\u30FB\u305D\u306E\u4ED6'];\nfunction evidenceList(item){\n const list=el('ul',undefined,'evidence');\n for(const evidence of item.evidence||[]){const li=el('li'),badge=el('span',evidence.source==='hub'?'\u904B\u7528Hub':'\u5217\u8ECA\u30ED\u30B0','source'+(evidence.source==='log'?' log':''));li.append(badge);\n  if(evidence.source==='hub'&&evidence.url){const a=el('a',evidence.label);a.href=evidence.url;a.target='_blank';a.rel='noopener';li.append(a);}else{li.append(document.createTextNode(evidence.label));if(evidence.trainNumber){const button=el('button','\u30ED\u30B0\u3092\u898B\u308B');button.type='button';button.onclick=()=>{$('date').value=evidence.serviceDate||'';$('group').value=evidence.groupName||'';$('query').value=evidence.trainNumber;showView('log');void load();};li.append(' ',button);}}\n  list.append(li);\n }return list;\n}\nfunction fleetTable(label,items){\n const section=el('section',undefined,'fleet-group');section.append(el('h2',`${label}\u3000${items.length}\u7DE8\u6210`));const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),hr=el('tr');for(const h of ['','\u7DE8\u6210','\u73FE\u5728\u306E\u5224\u5B9A','\u6839\u62E0'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');\n if(!items.length){const row=el('tr'),cell=el('td','\u8A72\u5F53\u3059\u308B\u7DE8\u6210\u306F\u3042\u308A\u307E\u305B\u3093','empty-row');cell.colSpan=4;row.append(cell);body.append(row);}\n items.forEach((item,index)=>{const row=el('tr',undefined,'fleet-row '+item.kind),number=el('td',String(index+1),'fleet-number');number.dataset.label='\u756A\u53F7';row.append(number);const name=el('td');name.dataset.label='\u7DE8\u6210';const link=(item.evidence||[]).find(x=>x.source==='hub'&&x.url);if(link){const a=el('a',item.formation,'fleet-name');a.href=link.url;a.target='_blank';a.rel='noopener';name.append(a);}else name.append(el('span',item.formation,'fleet-name'));if(item.seriesName)name.append(el('div',item.seriesName,'fleet-note'));row.append(name);const current=el('td');current.dataset.label='\u73FE\u5728\u306E\u5224\u5B9A';current.append(el('span',item.source==='hub'?'\u904B\u7528Hub':'\u30ED\u30B0\u304B\u3089\u63A8\u5B9A','source'+(item.source==='log'?' log':'')),el('div',item.status));if(item.updatedAt)current.append(el('div','\u66F4\u65B0\uFF1A'+time(item.updatedAt),'fleet-note'));row.append(current);const evidence=el('td');evidence.dataset.label='\u6839\u62E0';evidence.append(evidenceList(item));row.append(evidence);body.append(row);});\n table.append(body);wrap.append(table);section.append(wrap);return section;\n}\nasync function loadFleet(force=false){const button=$('refreshFleet');button.disabled=true;$('error').textContent='';try{const data=await api('/api/fleet-status',{method:force?'POST':'GET'}),groups=new Map();for(const item of data.items||[]){if(!groups.has(item.category))groups.set(item.category,[]);groups.get(item.category).push(item);}const order=[...categoryOrder,...[...groups.keys()].filter(x=>!categoryOrder.includes(x)).sort((a,b)=>a.localeCompare(b,'ja'))];$('fleetTables').replaceChildren(...order.map(group=>fleetTable(group,groups.get(group)||[])));$('fleetSummary').replaceChildren(el('span',`\u63B2\u8F09 ${data.items?.length||0}\u7DE8\u6210`),el('span',`Hub\u78BA\u8A8D ${time(data.fetchedAt)}`));fleetLoaded=true;}catch(e){error(e);}finally{button.disabled=false;}}\nasync function open(){\n $('loginPanel').hidden=true;$('main').hidden=false;\n const view=location.hash==='#fleet'?'fleet':'log';\n showView(view);\n}\n$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/auth/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});token=d.token;sessionStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};\n$('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);\ndocument.querySelectorAll('[data-log-view]').forEach(button=>button.onclick=()=>showView(button.dataset.logView));$('refreshFleet').onclick=()=>loadFleet(true);\nwindow.addEventListener('hashchange',()=>{\n if(token)showView(location.hash==='#fleet'?'fleet':'log');\n});\n$('logout').onclick=()=>{token='';sessionStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;};\n$('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};\nsetInterval(()=>{if(token&&!document.hidden)void status();},30000);\nif(token)void open();\n" };
+`, "/logs.js": "'use strict';\nconst $=id=>document.getElementById(id),KEY='nankaiTrackerAccountToken',EMBED=new URLSearchParams(location.search).get('embed')==='1',PARENT_ORIGIN='https://111youdai.github.io';\nlet token=localStorage.getItem(KEY)||'',next=null,params=new URLSearchParams(),busy=false,fleetLoaded=false,logsLoaded=false;\nconst time=x=>x?new Date(x).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false}):'\u672A\u78BA\u8A8D';\nconst clock=x=>x?new Date(x).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'\u6642\u523B\u4E0D\u660E';\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nasync function api(url,options={}){\n const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(30000)});\n const data=await response.json();\n if(!response.ok){if(response.status===401){token='';localStorage.removeItem(KEY);$('loginPanel').hidden=false;$('main').hidden=true;}throw new Error(data.error||`HTTP ${response.status}`);}return data;\n}\nfunction error(e){$('error').textContent=e.message;}\nfunction timelineTime(point){const start=point.timeLabel||clock(point.time),end=point.endTimeLabel||(point.endTime?clock(point.endTime):'');return end&&end!==start?`${start}\u301C${end}`:start;}\nfunction timelineView(timeline){\n const box=el('section',undefined,'timeline');box.append(el('h3','\u63A8\u5B9A\u901A\u904E\u6642\u523B'));\n if(!timeline?.available){box.append(el('p','\u3053\u306E\u8A18\u9332\u306F\u3001\u8DDD\u96E2\u8A08\u7B97\u306B\u5FC5\u8981\u306A\u4F4D\u7F6E\u304C\u307E\u3060\u8DB3\u308A\u307E\u305B\u3093\u3002','muted'));return box;}\n const summary=el('div',undefined,'timeline-summary');summary.append(el('span',`\u8A18\u9332\u533A\u9593 ${timeline.distanceKm} km`),el('span',`\u5E73\u5747 ${timeline.averageSpeedKmh} km/h`));box.append(summary);\n const list=el('ol',undefined,'timeline-list');for(const point of timeline.points){const row=el('li'),when=el('time',timelineTime(point)),station=el('span',point.station+'\u99C5'),kind=el('small',point.kind==='observed'?'\u5B9F\u6E2C':point.kind==='known'?'\u65E2\u77E5\u6642\u523B':'\u63A8\u5B9A','timeline-kind '+point.kind);row.append(when,station,kind);if(point.note)row.title=point.note;list.append(row);}box.append(list,el('p',timeline.note,'timeline-note'));return box;\n}\nfunction showView(name){\n const fleet=name==='fleet';$('logView').hidden=fleet;$('fleetView').hidden=!fleet;\n document.querySelectorAll('[data-log-view]').forEach(button=>button.classList.toggle('active',button.dataset.logView===(fleet?'fleet':'log')));\n history.replaceState(null,'',fleet?'#fleet':'#log');\n if(fleet&&!fleetLoaded)void loadFleet();\n if(!fleet&&!logsLoaded)void load();\n}\nasync function status(){\n try{const s=await api('/api/logs/status');const box=$('status');box.className='panel'+(s.healthy?' ok':'');box.replaceChildren(el('strong',s.healthy?'\u30AF\u30E9\u30A6\u30C9\u3067\u76E3\u8996\u4E2D':'\u76E3\u8996\u30FB\u7167\u5408\u306E\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044'));\n box.append(el('p',`\u6700\u7D42\u53D6\u5F97\uFF1A${time(s.lastSuccess)} \uFF0F \u53D6\u5F97\u9593\u9694\uFF1A${s.intervalSeconds}\u79D2 \uFF0F \u7167\u5408\u5F85\u3061\uFF1A${s.pending}\u4EF6`));\n for(const [g,v] of Object.entries(s.groups))box.append(el('div',`${g==='nankai'?'\u5357\u6D77\u7DDA':'\u9AD8\u91CE\u7DDA'}\uFF1A${v.error||`\u914D\u4FE1\u6642\u523B ${time(v.sourceTime)}\u30FB${v.trainCount}\u5217\u8ECA`}`));\n if(s.refresh?.error)box.append(el('p','\u904B\u7528\u8868\u306E\u66F4\u65B0\u306B\u5931\u6557\uFF1A'+s.refresh.error,'error'));\n if(s.feedError||s.baselineError)box.append(el('p',[s.feedError,s.baselineError].filter(Boolean).join(' / '),'error'));\n if(s.baseline)box.append(el('small',`\u7167\u5408\u30C7\u30FC\u30BF\u66F4\u65B0\uFF1A${time(s.baseline.fetchedAt)}\u3002\u753B\u9762\u3092\u9589\u3058\u3066\u3082\u3001Cloudflare\u3067\u6BCE\u5206\u76E3\u8996\u3092\u7D99\u7D9A\u3057\u307E\u3059\u3002`));\n }catch(e){$('status').className='panel';$('status').textContent='\u76E3\u8996\u72B6\u6CC1\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002\u76E3\u8996\u4E2D\u304B\u3069\u3046\u304B\u78BA\u8A8D\u3067\u304D\u306A\u3044\u72B6\u614B\u3067\u3059\u3002';error(e);}\n}\nasync function allHistory(id){let after=0,items=[];do{const d=await api(`/api/logs/${id}/observations?after=${after}`);items.push(...d.items);after=d.next;}while(after);return items;}\nconst trainKey=value=>String(value??'').normalize('NFKC').replace(/^0+(?=\\d)/,'');\nconst atNamba=position=>/\u306A\u3093\u3070/.test(`${position?.current||''} ${position?.text||''}`);\nfunction formationKey(event){\n const formation=event.formation;\n return formation?.verified&&!/\u672A\u78BA\u8A8D/.test(formation.text||'')?String(formation.text).replace(/\\s+/g,'').toUpperCase():'';\n}\nfunction canLink(first,second){\n if(first.service_date!==second.service_date||!atNamba(first.last_position)||!atNamba(second.first_position))return false;\n const gap=Date.parse(second.first_seen)-Date.parse(first.last_seen);\n if(!Number.isFinite(gap)||gap < -120000||gap > 45*60000)return false;\n const explicit=trainKey(first.train_number)==='8450'&&['8673','8070'].includes(trainKey(second.train_number)),a=formationKey(first),b=formationKey(second);\n return explicit?(!a||!b||a===b):!!a&&a===b;\n}\nfunction groupRuns(items){\n const ordered=[...items].sort((a,b)=>Date.parse(a.first_seen)-Date.parse(b.first_seen)||a.id-b.id),used=new Set(),groups=[];\n for(const event of ordered){\n  if(used.has(event.id))continue;\n  const chain=[event];used.add(event.id);\n  while(true){const next=ordered.find(candidate=>!used.has(candidate.id)&&canLink(chain.at(-1),candidate));if(!next)break;chain.push(next);used.add(next.id);}\n  groups.push(chain);\n }\n return groups.sort((a,b)=>Math.max(...b.map(x=>x.id))-Math.max(...a.map(x=>x.id)));\n}\nfunction chainRange(events){const first=events[0],last=events.at(-1);return `${first.display_range?.first||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093'} \u2192 ${last.display_range?.last||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093'}`;}\nfunction chainGroups(events){return [...new Set(events.map(event=>event.group_name==='nankai'?'\u5357\u6D77\u7DDA\u7CFB\u7D71':'\u9AD8\u91CE\u7DDA\u7CFB\u7D71'))].join(' \u2192 ');}\nfunction verifiedFormation(events){return [...events].reverse().find(event=>formationKey(event))?.formation?.text||events.at(-1).formation?.text||'\u7DE8\u6210\u672A\u78BA\u8A8D';}\nfunction appendHistory(history,event,data,result,linked){\n if(linked)history.append(el('h3',`${event.train_number}\u5217\u8ECA`,'segment-title'));\n history.append(timelineView(result.timeline));\n const observations=el('details',undefined,'observation-group');observations.append(el('summary',`\u5728\u7DDA\u5C65\u6B74 ${data.length}\u4EF6\uFF08\u958B\u304F\uFF09`));\n const observationList=el('div',undefined,'observation-list');\n for(const observation of data){const row=el('details'),where=observation.position?.text||'\u4F4D\u7F6E\u4E0D\u660E';row.append(el('summary',`${clock(observation.source_time)}\u3000${where}`),el('pre',JSON.stringify(observation.payload,null,2)));observationList.append(row);}\n observations.append(observationList);history.append(observations);\n const baseline=el('details');baseline.append(el('summary','\u7167\u5408\u3057\u305F\u904B\u7528\u8868'),el('pre',JSON.stringify(event.baseline,null,2)));history.append(baseline);\n}\nfunction card(input){\n const events=Array.isArray(input)?input:[input],e=events[0],lastEvent=events.at(-1),linked=events.length>1,known=lastEvent.special||e.special,a=el('article',undefined,linked?'linked-card':''),top=el('div',undefined,'top'),numbers=events.map(event=>`${event.train_number}\u5217\u8ECA`).join(' \u2192 ');\n top.append(el('h2',numbers),el('span',linked?'\u4E00\u9023\u306E\u904B\u8EE2':known?.label||'\u5B9A\u671F\u5916\u5019\u88DC','tag'+(known||linked?' known':'')));a.append(top);\n if(linked){\n  const explicit=trainKey(e.train_number)==='8450'&&['8673','8070'].includes(trainKey(lastEvent.train_number)),box=el('div',undefined,'known-service chain-service');\n  box.append(el('strong',explicit?'\u5343\u4EE3\u7530\u5165\u5834\u56DE\u9001':'\u306A\u3093\u3070\u6298\u8FD4\u3057\u3092\u542B\u3080\u4E00\u9023\u306E\u904B\u8EE2'),el('div','\u5217\u756A\uFF1A'+numbers),el('div','\u904B\u8EE2\u533A\u9593\uFF1A'+chainRange(events)),el('small','\u540C\u4E00\u7DE8\u6210\u30FB\u306A\u3093\u3070\u3067\u306E\u6298\u8FD4\u3057\u30FB\u524D\u5F8C\u306E\u78BA\u8A8D\u6642\u523B\u304B\u3089\u4E00\u9023\u306E\u904B\u8EE2\u3068\u3057\u3066\u307E\u3068\u3081\u3066\u3044\u307E\u3059\u3002'));a.append(box);\n }else if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','\u533A\u9593\uFF1A'+known.route));if(known.schedule)box.append(el('div','\u6642\u523B\uFF1A'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}\n const details=el('div',undefined,'details'),rows=[['\u7DE8\u6210\uFF08\u6700\u5F8C\u306B\u691C\u8A3C\u3067\u304D\u305F\u5024\uFF09',verifiedFormation(events)],['\u904B\u884C\u65E5\u30FB\u7CFB\u7D71',`${e.service_date} \uFF0F ${chainGroups(events)}`],['\u521D\u56DE \u2192 \u6700\u7D42\u78BA\u8A8D',`${time(e.first_seen)} \u2192 ${time(lastEvent.last_seen)}`],['\u63A8\u5B9A\u3057\u305F\u904B\u8EE2\u533A\u9593',chainRange(events)],['\u6700\u7D42\u78BA\u8A8D\u5730\u70B9',lastEvent.display_range?.last||'\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093']];\n if(linked)rows.splice(1,0,['\u5217\u756A\u306E\u3064\u306A\u304C\u308A',numbers]);\n for(const [label,value] of rows){const cell=el('div',label,'muted');cell.append(el('b',value));details.append(cell);}a.append(details);\n const button=el('button',linked?'\u5404\u5217\u8ECA\u306E\u63A8\u5B9A\u6642\u523B\u30FB\u5728\u7DDA\u5C65\u6B74':'\u63A8\u5B9A\u6642\u523B\u30FB\u5728\u7DDA\u5C65\u6B74'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);\n button.onclick=async()=>{if(!history.hidden){history.hidden=true;return;}button.disabled=true;try{const results=await Promise.all(events.map(async event=>({event,data:await allHistory(event.id),result:await api(`/api/logs/${event.id}/timeline`)})));history.replaceChildren();for(const item of results)appendHistory(history,item.event,item.data,item.result,linked);history.hidden=false;}catch(exception){error(exception);}finally{button.disabled=false;}};\n return a;\n}\nasync function load(reset=true){if(busy)return;busy=true;$('error').textContent='';try{\n if(reset){params=new URLSearchParams({date:$('date').value,group:$('group').value,q:$('query').value});next=null;}\n const query=new URLSearchParams(params);if(next)query.set('before',next);\n const data=await api('/api/logs?'+query);if(reset)$('events').replaceChildren();for(const group of groupRuns(data.items))$('events').append(card(group));\n if(reset&&!data.items.length)$('events').append(el('p','\u8A72\u5F53\u3059\u308B\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u76E3\u8996\u958B\u59CB\u524D\u306E\u5C65\u6B74\u306F\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002'));\n if(reset)logsLoaded=true;\n next=data.next;$('more').hidden=!next;await status();\n }catch(e){error(e);}finally{busy=false;}}\nconst categoryOrder=['6\u4E21\uFF08\u56FA\u5B9A\uFF09','4\u4E21\uFF08\u56FA\u5B9A\uFF09','2\u4E21\uFF08\u56FA\u5B9A\uFF09','\u7279\u6025\u8ECA\u30FB\u305D\u306E\u4ED6'];\nfunction evidenceList(item){\n const list=el('ul',undefined,'evidence');\n for(const evidence of item.evidence||[]){const li=el('li'),badge=el('span',evidence.source==='hub'?'\u904B\u7528Hub':'\u5217\u8ECA\u30ED\u30B0','source'+(evidence.source==='log'?' log':''));li.append(badge);\n  if(evidence.source==='hub'&&evidence.url){const a=el('a',evidence.label);a.href=evidence.url;a.target='_blank';a.rel='noopener';li.append(a);}else{li.append(document.createTextNode(evidence.label));if(evidence.trainNumber){const button=el('button','\u30ED\u30B0\u3092\u898B\u308B');button.type='button';button.onclick=()=>{$('date').value=evidence.serviceDate||'';$('group').value=evidence.groupName||'';$('query').value=evidence.trainNumber;showView('log');void load();};li.append(' ',button);}}\n  list.append(li);\n }return list;\n}\nfunction fleetTable(label,items){\n const section=el('section',undefined,'fleet-group');section.append(el('h2',`${label}\u3000${items.length}\u7DE8\u6210`));const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),hr=el('tr');for(const h of ['','\u7DE8\u6210','\u73FE\u5728\u306E\u5224\u5B9A','\u6839\u62E0'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');\n if(!items.length){const row=el('tr'),cell=el('td','\u8A72\u5F53\u3059\u308B\u7DE8\u6210\u306F\u3042\u308A\u307E\u305B\u3093','empty-row');cell.colSpan=4;row.append(cell);body.append(row);}\n items.forEach((item,index)=>{const row=el('tr',undefined,'fleet-row '+item.kind),number=el('td',String(index+1),'fleet-number');number.dataset.label='\u756A\u53F7';row.append(number);const name=el('td');name.dataset.label='\u7DE8\u6210';const link=(item.evidence||[]).find(x=>x.source==='hub'&&x.url);if(link){const a=el('a',item.formation,'fleet-name');a.href=link.url;a.target='_blank';a.rel='noopener';name.append(a);}else name.append(el('span',item.formation,'fleet-name'));if(item.seriesName)name.append(el('div',item.seriesName,'fleet-note'));row.append(name);const current=el('td');current.dataset.label='\u73FE\u5728\u306E\u5224\u5B9A';current.append(el('span',item.source==='hub'?'\u904B\u7528Hub':'\u30ED\u30B0\u304B\u3089\u63A8\u5B9A','source'+(item.source==='log'?' log':'')),el('div',item.status));if(item.updatedAt)current.append(el('div','\u66F4\u65B0\uFF1A'+time(item.updatedAt),'fleet-note'));row.append(current);const evidence=el('td');evidence.dataset.label='\u6839\u62E0';evidence.append(evidenceList(item));row.append(evidence);body.append(row);});\n table.append(body);wrap.append(table);section.append(wrap);return section;\n}\nasync function loadFleet(force=false){const button=$('refreshFleet');button.disabled=true;$('error').textContent='';try{const data=await api('/api/fleet-status',{method:force?'POST':'GET'}),groups=new Map();for(const item of data.items||[]){if(!groups.has(item.category))groups.set(item.category,[]);groups.get(item.category).push(item);}const order=[...categoryOrder,...[...groups.keys()].filter(x=>!categoryOrder.includes(x)).sort((a,b)=>a.localeCompare(b,'ja'))];$('fleetTables').replaceChildren(...order.map(group=>fleetTable(group,groups.get(group)||[])));$('fleetSummary').replaceChildren(el('span',`\u63B2\u8F09 ${data.items?.length||0}\u7DE8\u6210`),el('span',`Hub\u78BA\u8A8D ${time(data.fetchedAt)}`));fleetLoaded=true;}catch(e){error(e);}finally{button.disabled=false;}}\nasync function open(){\n $('loginPanel').hidden=true;$('main').hidden=false;\n const view=location.hash==='#fleet'?'fleet':'log';\n showView(view);\n}\n$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,password:$('password').value})});token=d.token;localStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};\n$('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);\ndocument.querySelectorAll('[data-log-view]').forEach(button=>button.onclick=()=>showView(button.dataset.logView));$('refreshFleet').onclick=()=>loadFleet(true);\nwindow.addEventListener('hashchange',()=>{\n if(token)showView(location.hash==='#fleet'?'fleet':'log');\n});\n$('logout').onclick=()=>{token='';localStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;if(EMBED)parent.postMessage({type:'nankai-tracker-logout'},PARENT_ORIGIN);};\n$('export').onclick=async()=>{const button=$('export');button.disabled=true;try{let cursor=null,items=[];do{const query=new URLSearchParams(params);if(cursor)query.set('before',cursor);const data=await api('/api/logs?'+query);items.push(...data.items);cursor=data.next;}while(cursor);for(const e of items)e.observations=await allHistory(e.id);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),filters:Object.fromEntries(params),items},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=el('a');a.href=u;a.download='nankai-train-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){error(e);}finally{button.disabled=false;}};\nsetInterval(()=>{if(token&&!document.hidden)void status();},30000);\nwindow.addEventListener('message',event=>{\n if(event.origin!==PARENT_ORIGIN||event.data?.type!=='nankai-tracker-auth'||typeof event.data.token!=='string')return;\n token=event.data.token;localStorage.setItem(KEY,token);$('error').textContent='';void open();\n});\nif(token)void open();\n" };
 var stdin_default = {
   scheduled: worker_default.scheduled,
   fetch(request, env, ctx) {

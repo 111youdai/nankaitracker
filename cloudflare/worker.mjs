@@ -1,5 +1,5 @@
 import {poll,refresh,refreshFleet,refreshLiveFormations,read,put} from './data.mjs';
-import {issue,authorized,samePassword} from './auth.mjs';
+import {handleAccountRequest,authenticateAccount} from './accounts.mjs';
 import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
@@ -50,6 +50,8 @@ const eventSelect=`SELECT events.*,
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
  try{
+  const accountResponse=await handleAccountRequest(request,env);
+  if(accountResponse)return accountResponse;
   if(p==='/api/live-formations'){
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Max-Age':'86400'}});
    if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
@@ -62,15 +64,8 @@ export async function handle(request,env){
    for(const row of rows){const trainKey=core.numberKey(row.train_number),special=specialService(row.train_number);items[`${row.group_name}:${trainKey}`]={trainNumber:row.train_number,label:special?.label||'定期外候補',category:special?.category||'candidate',lastSeen:row.last_seen};}
    return publicJson({fetchedAt:new Date().toISOString(),items});
   }
-  if(p==='/api/auth/logs'&&request.method==='POST'){
-   if(!env.LOG_ACCESS_PASSWORD)return json({error:'Cloudflareにログ用パスワードが未設定です'},503);
-   const body=await request.text();if(body.length>1024)return json({error:'リクエストが大きすぎます'},413);
-   let data;try{data=JSON.parse(body);}catch{return json({error:'JSONが不正です'},400);}
-   if(!await samePassword(data.password,env.LOG_ACCESS_PASSWORD))return json({error:'パスワードが違います'},401);
-   return json({ok:true,token:await issue(env.LOG_ACCESS_PASSWORD),expires_in:43200});
-  }
   if(p==='/api/fleet-status'){
-   if(!await authorized(request,env.LOG_ACCESS_PASSWORD))return json({error:'編成状況表の閲覧にはパスワードが必要です'},401);
+   if(!await authenticateAccount(request,env))return json({error:'編成状況表の閲覧にはログインが必要です'},401);
    if(!['GET','POST'].includes(request.method))return json({error:'許可されていない操作です'},405);
    let snapshot=await read(db,'fleet-status');
    const stale=!snapshot||!Number.isFinite(Date.parse(snapshot.fetchedAt))||Date.now()-Date.parse(snapshot.fetchedAt)>3600000;
@@ -85,7 +80,7 @@ export async function handle(request,env){
    return json(mergeFleetStatus(snapshot,events,normalOperations));
   }
   if(p.startsWith('/api/logs')){
-   if(!await authorized(request,env.LOG_ACCESS_PASSWORD))return json({error:'ログ閲覧にはパスワードが必要です'},401);
+   if(!await authenticateAccount(request,env))return json({error:'ログ閲覧にはログインが必要です'},401);
    if(request.method!=='GET')return json({error:'許可されていない操作です'},405);
    if(p==='/api/logs/status'){
     const s=await read(db,'monitor')||{intervalSeconds:60,groups:{},lastSuccess:null};
