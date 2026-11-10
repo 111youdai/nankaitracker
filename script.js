@@ -525,10 +525,14 @@ function setFleetSource(source) {
 }
 
 function setAppView(view, updateHistory = true) {
-    const normalizedView =
+    const requestedView =
         ["home", "route", "log", "fleet", "patterns"].includes(view)
             ? view
             : "home";
+    const protectedView = ["log", "fleet", "patterns"].includes(requestedView);
+    const normalizedView = protectedView && !window.canViewTrackerRecords?.()
+        ? "home"
+        : requestedView;
     const home = document.getElementById("home");
     const route = document.getElementById("routeWorkspace");
     const records = document.getElementById("recordsWorkspace");
@@ -625,6 +629,12 @@ document.querySelectorAll("[data-app-view]").forEach(control => {
         event.preventDefault();
         setAppView(control.dataset.appView);
     });
+});
+
+window.addEventListener("nankai-account-ready", () => {
+    if (!window.canViewTrackerRecords?.() && ["log", "fleet", "patterns"].includes(location.hash.replace("#", ""))) {
+        setAppView("home");
+    }
 });
 
 document.querySelectorAll("[data-fleet-source]").forEach(button => {

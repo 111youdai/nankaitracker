@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users(
  password_hash TEXT NOT NULL,
  password_iterations INTEGER NOT NULL,
  role TEXT NOT NULL CHECK(role IN ('owner','member')),
+ access_level TEXT NOT NULL DEFAULT 'position' CHECK(access_level IN ('position','records')),
  status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected','disabled')),
  session_version INTEGER NOT NULL DEFAULT 1,
  created_at TEXT NOT NULL,

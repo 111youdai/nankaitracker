@@ -1,5 +1,5 @@
 import {poll,refresh,refreshFleet,refreshLiveFormations,read,put} from './data.mjs';
-import {handleAccountRequest,authenticateAccount} from './accounts.mjs';
+import {handleAccountRequest,authenticateAccount,canAccessRecords} from './accounts.mjs';
 import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
@@ -65,7 +65,9 @@ export async function handle(request,env){
    return publicJson({fetchedAt:new Date().toISOString(),items});
   }
   if(p==='/api/fleet-status'){
-   if(!await authenticateAccount(request,env))return json({error:'編成状況表の閲覧にはログインが必要です'},401);
+   const user=await authenticateAccount(request,env);
+   if(!user)return json({error:'編成状況表の閲覧にはログインが必要です'},401);
+   if(!canAccessRecords(user))return json({error:'編成状況表を閲覧する権限がありません'},403);
    if(!['GET','POST'].includes(request.method))return json({error:'許可されていない操作です'},405);
    let snapshot=await read(db,'fleet-status');
    const stale=!snapshot||!Number.isFinite(Date.parse(snapshot.fetchedAt))||Date.now()-Date.parse(snapshot.fetchedAt)>3600000;
@@ -80,7 +82,9 @@ export async function handle(request,env){
    return json(mergeFleetStatus(snapshot,events,normalOperations));
   }
   if(p.startsWith('/api/logs')){
-   if(!await authenticateAccount(request,env))return json({error:'ログ閲覧にはログインが必要です'},401);
+   const user=await authenticateAccount(request,env);
+   if(!user)return json({error:'ログ閲覧にはログインが必要です'},401);
+   if(!canAccessRecords(user))return json({error:'ログを閲覧する権限がありません'},403);
    if(request.method!=='GET')return json({error:'許可されていない操作です'},405);
    if(p==='/api/logs/status'){
     const s=await read(db,'monitor')||{intervalSeconds:60,groups:{},lastSuccess:null};

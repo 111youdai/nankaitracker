@@ -111,7 +111,16 @@ async function open(){
  const view=location.hash==='#fleet'?'fleet':'log';
  showView(view);
 }
-$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,password:$('password').value})});token=d.token;localStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
+const recordsAllowed=user=>user?.role==='owner'||user?.accessLevel==='records';
+async function openAuthorized(user){
+ const account=user||((await api('/api/account/me')).user);
+ if(!recordsAllowed(account)){
+  token='';localStorage.removeItem(KEY);$('main').hidden=true;$('loginPanel').hidden=false;
+  throw new Error('このアカウントにはログ・編成状況の閲覧権限がありません。');
+ }
+ await open();
+}
+$('login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const d=await api('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,password:$('password').value})});token=d.token;if(!recordsAllowed(d.user)){token='';localStorage.removeItem(KEY);throw new Error('このアカウントにはログ・編成状況の閲覧権限がありません。');}localStorage.setItem(KEY,token);$('password').value='';await open();}catch(e){error(e);}finally{b.disabled=false;}};
 $('filters').onsubmit=e=>{e.preventDefault();void load();};$('more').onclick=()=>load(false);
 document.querySelectorAll('[data-log-view]').forEach(button=>button.onclick=()=>showView(button.dataset.logView));$('refreshFleet').onclick=()=>loadFleet(true);
 window.addEventListener('hashchange',()=>{
@@ -122,6 +131,6 @@ $('export').onclick=async()=>{const button=$('export');button.disabled=true;try{
 setInterval(()=>{if(token&&!document.hidden)void status();},30000);
 window.addEventListener('message',event=>{
  if(event.origin!==PARENT_ORIGIN||event.data?.type!=='nankai-tracker-auth'||typeof event.data.token!=='string')return;
- token=event.data.token;localStorage.setItem(KEY,token);$('error').textContent='';void open();
+ token=event.data.token;localStorage.setItem(KEY,token);$('error').textContent='';void openAuthorized().catch(error);
 });
-if(token)void open();
+if(token)void openAuthorized().catch(error);

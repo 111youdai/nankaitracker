@@ -12,6 +12,7 @@
 
     window.getTrackerAccountToken = () => token;
     window.getTrackerAccountUser = () => currentUser;
+    window.canViewTrackerRecords = () => currentUser?.role === 'owner' || currentUser?.accessLevel === 'records';
 
     async function api(path, options = {}) {
         const response = await fetch(`${worker}${path}`, {
@@ -43,7 +44,7 @@
 
     function sendTokenToRecords() {
         const frame = byId('recordsFrame');
-        if (!frame?.contentWindow || !token) return;
+        if (!frame?.contentWindow || !token || !window.canViewTrackerRecords()) return;
         frame.contentWindow.postMessage(
             { type: 'nankai-tracker-auth', token },
             new URL(worker).origin
@@ -52,13 +53,17 @@
 
     function showApp(user) {
         currentUser = user;
+        const recordsAllowed = window.canViewTrackerRecords();
         authGate.hidden = true;
         appShell.hidden = false;
+        document.body.classList.toggle('records-restricted', !recordsAllowed);
         const name = user.displayName || user.email;
         byId('accountInitial').textContent = [...name][0]?.toUpperCase() || 'U';
         byId('accountDisplayName').textContent = name;
         byId('accountEmail').textContent = user.email;
-        byId('accountRole').textContent = user.role === 'owner' ? '管理者' : 'メンバー';
+        byId('accountRole').textContent = user.role === 'owner'
+            ? '管理者・全機能'
+            : recordsAllowed ? '一般ユーザー・ログ閲覧可' : '一般ユーザー・列車位置のみ';
         byId('adminPanel').hidden = user.role !== 'owner';
         window.dispatchEvent(new CustomEvent('nankai-account-ready', { detail: user }));
         window.setTimeout(sendTokenToRecords, 300);
@@ -115,7 +120,10 @@
         status.textContent = {
             pending: '承認待ち', approved: '利用中', rejected: '拒否済み', disabled: '停止中'
         }[user.status] || user.status;
-        copy.append(title, email, status);
+        const access = document.createElement('small');
+        access.className = `user-access ${user.accessLevel === 'records' || user.role === 'owner' ? 'records' : 'position'}`;
+        access.textContent = user.role === 'owner' ? '全機能' : user.accessLevel === 'records' ? 'ログ・編成まで閲覧可' : '列車位置のみ';
+        copy.append(title, email, status, access);
         row.append(copy);
 
         if (user.role !== 'owner') {
@@ -148,6 +156,27 @@
                 });
                 actions.append(button);
             }
+            const accessButton = document.createElement('button');
+            const nextAccess = user.accessLevel === 'records' ? 'position' : 'records';
+            accessButton.type = 'button';
+            accessButton.textContent = nextAccess === 'records' ? 'ログ許可' : '位置のみに戻す';
+            accessButton.className = nextAccess === 'records' ? 'access-grant' : 'access-revoke';
+            accessButton.addEventListener('click', async () => {
+                accessButton.disabled = true;
+                try {
+                    await api(`/api/account/admin/users/${user.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ accessLevel: nextAccess })
+                    });
+                    await loadUsers();
+                } catch (error) {
+                    setMessage(error.message, true);
+                } finally {
+                    accessButton.disabled = false;
+                }
+            });
+            actions.append(accessButton);
             row.append(actions);
         }
         return row;

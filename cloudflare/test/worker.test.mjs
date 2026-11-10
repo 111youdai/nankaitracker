@@ -38,7 +38,7 @@ test('アカウント登録、管理者承認、ログAPI認証、利用停止',
  assert.equal((await setup.json()).needsOwner,true);assert.equal(setup.headers.get('access-control-allow-origin'),'https://111youdai.github.io');
  assert.equal((await request('/api/account/register',{displayName:'Owner',email:'owner@example.com',password:'long-password',setupCode:'wrong'})).status,401);
  const ownerResponse=await request('/api/account/register',{displayName:'Owner',email:'owner@example.com',password:'long-password',setupCode:'first-owner-code'}),ownerData=await ownerResponse.json();
- assert.equal(ownerResponse.status,201);assert.equal(ownerData.user.role,'owner');assert.ok(ownerData.token);
+ assert.equal(ownerResponse.status,201);assert.equal(ownerData.user.role,'owner');assert.equal(ownerData.user.accessLevel,'records');assert.ok(ownerData.token);
  for(const path of ['/api/logs','/api/logs/status','/api/logs/1/observations','/api/fleet-status'])assert.equal((await handle(new Request('https://example.com'+path),env)).status,401);
  for(const path of ['/api/logs','/api/logs/status','/api/logs/1/observations','/api/fleet-status'])assert.equal((await handle(new Request('https://example.com'+path,{headers:{Authorization:'Bearer '+ownerData.token}}),env)).status,200);
  assert.equal(await authenticateAccount(new Request('https://example.com',{headers:{Authorization:'Bearer '+ownerData.token+'x'}}),env),null);
@@ -48,6 +48,13 @@ test('アカウント登録、管理者承認、ログAPI認証、利用停止',
  assert.equal(member.status,'pending');
  assert.equal((await request(`/api/account/admin/users/${member.id}`,{status:'approved'},ownerData.token)).status,200);
  const memberLogin=await request('/api/account/login',{email:'member@example.com',password:'member-password'}),memberData=await memberLogin.json();assert.ok(memberData.token);
+ assert.equal(memberData.user.accessLevel,'position');
+ assert.equal((await handle(new Request('https://example.com/api/logs',{headers:{Authorization:'Bearer '+memberData.token}}),env)).status,403);
+ assert.equal((await handle(new Request('https://example.com/api/fleet-status',{headers:{Authorization:'Bearer '+memberData.token}}),env)).status,403);
+ assert.equal((await request(`/api/account/admin/users/${member.id}`,{accessLevel:'records'},ownerData.token)).status,200);
+ assert.equal((await handle(new Request('https://example.com/api/logs',{headers:{Authorization:'Bearer '+memberData.token}}),env)).status,200);
+ assert.equal((await request(`/api/account/admin/users/${member.id}`,{accessLevel:'position'},ownerData.token)).status,200);
+ assert.equal((await handle(new Request('https://example.com/api/logs',{headers:{Authorization:'Bearer '+memberData.token}}),env)).status,403);
  assert.equal((await request(`/api/account/admin/users/${member.id}`,{status:'disabled'},ownerData.token)).status,200);
  assert.equal(await authenticateAccount(new Request('https://example.com',{headers:{Authorization:'Bearer '+memberData.token}}),env),null);
  assert.equal((await handle(new Request('https://example.com/.env'),env)).status,404);

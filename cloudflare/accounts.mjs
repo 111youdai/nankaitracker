@@ -115,6 +115,7 @@ const publicUser=user=>({
  email:user.email,
  displayName:user.display_name,
  role:user.role,
+ accessLevel:user.role==='owner'?'records':(user.access_level||'position'),
  status:user.status,
  createdAt:user.created_at,
  approvedAt:user.approved_at||null
@@ -126,6 +127,10 @@ export async function authenticateAccount(request,env){
  const user=await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(payload.sub).first();
  if(!user||user.status!=='approved'||Number(user.session_version)!==Number(payload.ver))return null;
  return user;
+}
+
+export function canAccessRecords(user){
+ return !!user&&(user.role==='owner'||user.access_level==='records');
 }
 
 async function rateKey(request,email){
@@ -169,10 +174,10 @@ async function register(request,env){
   if(!env.ACCOUNT_SETUP_CODE)return accountJson(request,{error:'初期管理者コードが未設定です'},503);
   if(!await sameSecret(String(data.setupCode||''),env.ACCOUNT_SETUP_CODE))return accountJson(request,{error:'初期管理者コードが違います'},401);
  }
- const password=await passwordRecord(input.password,env.ACCOUNT_PASSWORD_PEPPER||env.ACCOUNT_SESSION_SECRET),now=new Date().toISOString(),role=firstOwner?'owner':'member',status=firstOwner?'approved':'pending';
+ const password=await passwordRecord(input.password,env.ACCOUNT_PASSWORD_PEPPER||env.ACCOUNT_SESSION_SECRET),now=new Date().toISOString(),role=firstOwner?'owner':'member',accessLevel=firstOwner?'records':'position',status=firstOwner?'approved':'pending';
  try{
-  await env.DB.prepare('INSERT INTO users(email,display_name,password_salt,password_hash,password_iterations,role,status,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?)')
-   .bind(input.email,input.displayName,password.salt,password.hash,password.iterations,role,status,now,firstOwner?now:null).run();
+  await env.DB.prepare('INSERT INTO users(email,display_name,password_salt,password_hash,password_iterations,role,access_level,status,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+   .bind(input.email,input.displayName,password.salt,password.hash,password.iterations,role,accessLevel,status,now,firstOwner?now:null).run();
   const user=await env.DB.prepare('SELECT * FROM users WHERE email=? COLLATE NOCASE').bind(input.email).first();
   if(firstOwner){
    const token=await issueAccountToken(user,env.ACCOUNT_SESSION_SECRET);
@@ -212,17 +217,23 @@ async function adminUsers(request,env){
  if(!owner)return accountJson(request,{error:'ログインが必要です'},401);
  if(owner.role!=='owner')return accountJson(request,{error:'管理者権限が必要です'},403);
  if(request.method==='GET'){
-  const rows=(await env.DB.prepare('SELECT id,email,display_name,role,status,created_at,approved_at FROM users ORDER BY CASE status WHEN \'pending\' THEN 0 ELSE 1 END, created_at DESC').all()).results;
+  const rows=(await env.DB.prepare('SELECT id,email,display_name,role,access_level,status,created_at,approved_at FROM users ORDER BY CASE status WHEN \'pending\' THEN 0 ELSE 1 END, created_at DESC').all()).results;
   return accountJson(request,{items:rows.map(publicUser)});
  }
  const match=new URL(request.url).pathname.match(/^\/api\/account\/admin\/users\/(\d+)$/);
  if(request.method==='POST'&&match){
   const id=Number(match[1]);
   if(id===Number(owner.id))return accountJson(request,{error:'自分自身の状態は変更できません'},400);
-  const data=await readJson(request),status=String(data.status||'');
-  if(!['approved','rejected','disabled'].includes(status))return accountJson(request,{error:'状態が不正です'},400);
+  const data=await readJson(request),status=data.status===undefined?'':String(data.status),accessLevel=data.accessLevel===undefined?'':String(data.accessLevel);
   const target=await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(id).first();
   if(!target)return accountJson(request,{error:'アカウントが見つかりません'},404);
+  if(accessLevel){
+   if(target.role==='owner')return accountJson(request,{error:'管理者の閲覧範囲は変更できません'},400);
+   if(!['position','records'].includes(accessLevel))return accountJson(request,{error:'閲覧範囲が不正です'},400);
+   await env.DB.prepare('UPDATE users SET access_level=? WHERE id=?').bind(accessLevel,id).run();
+   return accountJson(request,{ok:true,accessLevel});
+  }
+  if(!['approved','rejected','disabled'].includes(status))return accountJson(request,{error:'状態が不正です'},400);
   const now=new Date().toISOString();
   await env.DB.prepare('UPDATE users SET status=?,approved_at=?,approved_by=?,session_version=session_version+1 WHERE id=?')
    .bind(status,status==='approved'?now:null,status==='approved'?owner.id:null,id).run();

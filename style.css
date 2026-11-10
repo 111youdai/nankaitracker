@@ -100,10 +100,17 @@ a { color: inherit; text-decoration: none; }
 .user-row > div:first-child { display: grid; min-width: 0; }
 .user-row span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .user-row small { color: #e5b858; }
-.user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.user-row .user-access { color: var(--muted); }
+.user-row .user-access.records { color: #70e4c9; }
+.user-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
 .user-actions button { min-height: 36px; padding: 6px 10px; border: 1px solid #31505b; border-radius: 10px; color: #fff; cursor: pointer; }
 .user-actions .approve { background: #13584f; }
 .user-actions .reject { background: #542b29; }
+.user-actions .access-grant { background: #214f69; }
+.user-actions .access-revoke { background: #3d3546; }
+.records-restricted [data-app-view="log"],
+.records-restricted [data-app-view="fleet"],
+.records-restricted [data-app-view="patterns"] { display: none !important; }
 .account-logout { width: 100%; background: #402724; }
 
 .app-header {
