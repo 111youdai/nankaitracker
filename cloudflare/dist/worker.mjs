@@ -556,7 +556,7 @@ var require_stations = __commonJS({
     function buildTimeline2(rows = [], options = {}) {
       return knownChiyodaEntry(options.trainNumber, options.serviceDate) || observedTimeline(rows);
     }
-    module.exports = { STATION_NAMES, ROUTES, DISTANCE_ROUTES, stationName, stationLabel, stationPosition, trajectoryPositions: trajectoryPositions2, observedRange, buildTimeline: buildTimeline2 };
+    module.exports = { STATION_NAMES, ROUTES, DISTANCE_ROUTES, stationName, stationLabel, stationPosition, trajectoryPositions: trajectoryPositions2, observedRange, buildTimeline: buildTimeline2, observedTimeline };
   }
 });
 
@@ -1067,6 +1067,29 @@ async function handle(request, env) {
   try {
     const accountResponse = await handleAccountRequest(request, env);
     if (accountResponse) return accountResponse;
+    if (p === "/api/patterns" || p.startsWith("/api/patterns/")) {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+      const user = await authenticateAccount(request, env);
+      if (!user) return accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+      if (!canAccessRecords(user)) return accountJson(request, { error: "\u30B9\u30B8\u4E00\u89A7\u3092\u95B2\u89A7\u3059\u308B\u6A29\u9650\u304C\u3042\u308A\u307E\u305B\u3093" }, 403);
+      if (request.method !== "GET") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+      if (p === "/api/patterns") {
+        const before = Number(u.searchParams.get("before") || Number.MAX_SAFE_INTEGER);
+        if (!Number.isSafeInteger(before) || before < 1) return accountJson(request, { error: "\u691C\u7D22\u6761\u4EF6\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
+        const rows2 = (await db.prepare(eventSelect + " WHERE events.id<? AND events.train_key NOT IN (?) ORDER BY events.id DESC LIMIT 100").bind(before, ...import_core2.default.IGNORED_TRAIN_KEYS).all()).results;
+        const items = rows2.map(decodeEvent).map((e) => ({ id: e.id, trainNumber: e.train_number, trainKey: e.train_key, serviceDate: e.service_date, group: e.group_name, firstSeen: e.first_seen, lastSeen: e.last_seen, formation: e.formation.text, range: e.display_range, firstStation: e.first_position.current, lastStation: e.last_position.current, special: e.special }));
+        return accountJson(request, { items, next: rows2.length === 100 ? rows2.at(-1).id : null });
+      }
+      const match = p.match(/^\/api\/patterns\/(\d+)$/);
+      if (!match) return accountJson(request, { error: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
+      const id = Number(match[1]);
+      if (!Number.isSafeInteger(id) || id < 1) return accountJson(request, { error: "ID\u304C\u4E0D\u6B63\u3067\u3059" }, 400);
+      const event = await db.prepare("SELECT train_key FROM events WHERE id=?").bind(id).first();
+      if (!event || import_core2.default.ignoredTrain(event.train_key)) return accountJson(request, { error: "\u8A18\u9332\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
+      const rows = (await db.prepare("SELECT source_time,payload FROM observations WHERE event_id=? ORDER BY source_time,id LIMIT 2001").bind(id).all()).results;
+      if (rows.length > 2e3) return accountJson(request, { timeline: null, reason: "\u8A18\u9332\u304C\u9577\u3044\u305F\u3081\u3001\u5143\u306E\u30ED\u30B0\u3067\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044" });
+      return accountJson(request, { timeline: import_stations.default.observedTimeline(rows.map((row) => ({ ...row, payload: JSON.parse(row.payload) }))) });
+    }
     if (p === "/api/live-formations") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Max-Age": "86400" } });
       if (request.method !== "GET") return publicJson({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
@@ -1163,7 +1186,8 @@ async function handle(request, env) {
     return json({ error: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }, 404);
   } catch (e) {
     console.error("request failed", e.message);
-    return json({ error: "\u30C7\u30FC\u30BF\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002Cloudflare\u306E\u30ED\u30B0\u3068D1\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044" }, 503);
+    const body = { error: "\u30C7\u30FC\u30BF\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3002\u6642\u9593\u3092\u304A\u3044\u3066\u518D\u8A66\u884C\u3057\u3066\u304F\u3060\u3055\u3044" };
+    return p.startsWith("/api/patterns") ? accountJson(request, body, 503) : json(body, 503);
   }
 }
 var worker_default = {

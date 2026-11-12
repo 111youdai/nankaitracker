@@ -127,4 +127,4 @@ function observedTimeline(rows=[]){
  return {available:true,method:'observations-distance',distanceKm:round(distance),averageSpeedKmh:round(speed),averageIncludesStops:true,points,note:'保存した在線時刻を固定点として、駅間の営業キロから通過時刻を補間しています。平均速度は停車時間を含む記録区間の値です。'};
 }
 function buildTimeline(rows=[],options={}){return knownChiyodaEntry(options.trainNumber,options.serviceDate)||observedTimeline(rows);}
-module.exports={STATION_NAMES,ROUTES,DISTANCE_ROUTES,stationName,stationLabel,stationPosition,trajectoryPositions,observedRange,buildTimeline};
+module.exports={STATION_NAMES,ROUTES,DISTANCE_ROUTES,stationName,stationLabel,stationPosition,trajectoryPositions,observedRange,buildTimeline,observedTimeline};

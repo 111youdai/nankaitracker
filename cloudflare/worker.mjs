@@ -1,5 +1,5 @@
 import {poll,refresh,refreshFleet,refreshLiveFormations,read,put} from './data.mjs';
-import {handleAccountRequest,authenticateAccount,canAccessRecords} from './accounts.mjs';
+import {handleAccountRequest,authenticateAccount,canAccessRecords,accountJson,corsHeaders} from './accounts.mjs';
 import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
@@ -52,6 +52,31 @@ export async function handle(request,env){
  try{
   const accountResponse=await handleAccountRequest(request,env);
   if(accountResponse)return accountResponse;
+  if(p==='/api/patterns'||p.startsWith('/api/patterns/')){
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders(request)});
+   const user=await authenticateAccount(request,env);
+   if(!user)return accountJson(request,{error:'ログインが必要です'},401);
+   if(!canAccessRecords(user))return accountJson(request,{error:'スジ一覧を閲覧する権限がありません'},403);
+   if(request.method!=='GET')return accountJson(request,{error:'許可されていない操作です'},405);
+   if(p==='/api/patterns'){
+    const before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
+    if(!Number.isSafeInteger(before)||before<1)return accountJson(request,{error:'検索条件が不正です'},400);
+    const rows=(await db.prepare(eventSelect+' WHERE events.id<? AND events.train_key NOT IN (?) ORDER BY events.id DESC LIMIT 100').bind(before,...core.IGNORED_TRAIN_KEYS).all()).results;
+    const items=rows.map(decodeEvent).map(e=>({id:e.id,trainNumber:e.train_number,trainKey:e.train_key,serviceDate:e.service_date,group:e.group_name,firstSeen:e.first_seen,lastSeen:e.last_seen,formation:e.formation.text,range:e.display_range,firstStation:e.first_position.current,lastStation:e.last_position.current,special:e.special}));
+    return accountJson(request,{items,next:rows.length===100?rows.at(-1).id:null});
+   }
+   const match=p.match(/^\/api\/patterns\/(\d+)$/);
+   if(!match)return accountJson(request,{error:'見つかりません'},404);
+   const id=Number(match[1]);
+   if(!Number.isSafeInteger(id)||id<1)return accountJson(request,{error:'IDが不正です'},400);
+   const event=await db.prepare('SELECT train_key FROM events WHERE id=?').bind(id).first();
+   if(!event||core.ignoredTrain(event.train_key))return accountJson(request,{error:'記録が見つかりません'},404);
+   const rows=(await db.prepare('SELECT source_time,payload FROM observations WHERE event_id=? ORDER BY source_time,id LIMIT 2001').bind(id).all()).results;
+   // Use actual observations only here: known reference schedules must not be
+   // presented as a recorded run. Never silently present a truncated history.
+   if(rows.length>2000)return accountJson(request,{timeline:null,reason:'記録が長いため、元のログで確認してください'});
+   return accountJson(request,{timeline:stations.observedTimeline(rows.map(row=>({...row,payload:JSON.parse(row.payload)})))});
+  }
   if(p==='/api/live-formations'){
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Max-Age':'86400'}});
    if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
@@ -121,7 +146,7 @@ export async function handle(request,env){
    u.pathname=p==='/logs.js'?'/logs.js':'/logs.html';return env.ASSETS.fetch(new Request(u,request));
   }
   return json({error:'見つかりません'},404);
- }catch(e){console.error('request failed',e.message);return json({error:'データを取得できません。CloudflareのログとD1設定を確認してください'},503);}
+ }catch(e){console.error('request failed',e.message);const body={error:'データを取得できません。時間をおいて再試行してください'};return p.startsWith('/api/patterns')?accountJson(request,body,503):json(body,503);}
 }
 export default {
  fetch:handle,

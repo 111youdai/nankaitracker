@@ -18,6 +18,26 @@ const t=(n='9991',extra={})=>({line_id:1,train_number:n,train_length_id:4,car_nu
 function feed(trains=[t()]){return {trains,nankai_update_date:'2026/10/29',nankai_update_time:'01:00:00',koya_update_date:'2026/10/29',koya_update_time:'01:00:00'};}
 async function seed(db){for(const g of ['nankai','koya']){await put(db,'revisions:'+g,{revisions:['2026-03-28'],checkedAt:at}).run();for(const id of ['weekday','holiday'])await db.prepare('INSERT INTO baselines VALUES (?,?,?,?,?)').bind(g,id,'2026-03-28',at,JSON.stringify({numbers:['201'],branch:[],lines:[]})).run();}}
 const enqueue=async(db,trains,ts=at,group='nankai',day='2026-10-28')=>db.prepare('INSERT OR IGNORE INTO pending(group_name,source_time,service_date,payload) VALUES (?,?,?,?)').bind(group,ts,day,JSON.stringify({observedAt:ts,trains})).run();
+test('スジ一覧は既存ログ・追加履歴を自動反映し、閲覧権限とCORSを守る',async()=>{
+ const db=database();try{
+  await seed(db);
+  const env={DB:db,ACCOUNT_SESSION_SECRET:accountSecret},headers={...await accountHeaders(db,env),Origin:'https://111youdai.github.io'};
+  const req=path=>new Request('https://example.com'+path,{headers});
+  assert.equal((await handle(new Request('https://example.com/api/patterns'),env)).status,401);
+  assert.equal((await handle(req('/api/patterns'),env)).headers.get('access-control-allow-origin'),headers.Origin);
+  assert.deepEqual((await (await handle(req('/api/patterns'),env)).json()).items,[]);
+  await poll(db,now,async()=>feed([t('9185',{station_id:118,line_id:2,direction:'down',next_station_id:null})]));
+  const event=await db.prepare('SELECT * FROM events').first();
+  await db.prepare('INSERT INTO observations(event_id,source_time,observed_at,payload) VALUES (?,?,?,?)').bind(event.id,'2026-10-28T16:16:00Z','2026-10-28T16:16:00Z',JSON.stringify(t('9185',{station_id:126,line_id:2,direction:'down',next_station_id:null}))).run();
+  const list=await (await handle(req('/api/patterns'),env)).json();
+  assert.equal(list.items[0].trainNumber,'9185');
+  const timeline=(await (await handle(req('/api/patterns/'+event.id),env)).json()).timeline;
+  assert.equal(timeline.method,'observations-distance');assert.ok(timeline.points.some(x=>x.station==='河内長野'));
+  const member=await approvedAccount(db,{email:'position@example.com',role:'member'}),token=await issueAccountToken(member,accountSecret);
+  for(const path of ['/api/patterns','/api/patterns/'+event.id])assert.equal((await handle(new Request('https://example.com'+path,{headers:{Authorization:`Bearer ${token}`}}),env)).status,403);
+  const preflight=await handle(new Request('https://example.com/api/patterns',{method:'OPTIONS',headers:{Origin:headers.Origin}}),env);assert.equal(preflight.status,204);
+ }finally{db.raw.close();}
+});
 async function approvedAccount(db,{email='owner@example.com',name='Owner',role='owner'}={}){
  await db.prepare('INSERT INTO users(email,display_name,password_salt,password_hash,password_iterations,role,status,session_version,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(email,name,'AA','AA',1,role,'approved',1,at,at).run();
  return db.prepare('SELECT * FROM users WHERE email=?').bind(email).first();
