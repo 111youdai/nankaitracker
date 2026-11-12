@@ -304,12 +304,12 @@ a { color: inherit; text-decoration: none; }
 .pattern-note { margin: 13px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
 .pattern-recorded { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
 .pattern-recorded h4 { margin: 0 0 10px; color: #8be6d4; }
-.pattern-recorded label { display: grid; gap: 6px; font-size: 12px; }
-.pattern-recorded select { width: 100%; min-width: 0; padding: 10px; color: var(--text); background: #0a222c; border: 1px solid var(--line); border-radius: 8px; font-size: 16px; }
-.pattern-recorded details { margin-top: 12px; }
-.pattern-recorded summary { cursor: pointer; padding: 8px 0; }
+.pattern-recorded-body { display: grid; gap: 9px; }
+.pattern-recorded-schedule { padding: 10px 12px; }
 .pattern-recorded-stops { list-style: none; padding: 0; }
-.pattern-recorded-stops li { display: grid; grid-template-columns: 95px 1fr auto; gap: 6px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.pattern-recorded-stops li { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.pattern-recorded-stops li:last-child { border-bottom: 0; }
+.pattern-recorded-stops time { color: #d9fffa; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pattern-kind { padding: 3px 6px; border-radius: 5px; background: #5b481c; color: #ffe39b; }
 .pattern-kind.observed { background: #155b54; color: #bff6eb; }
 #refreshPatterns { margin: 12px 0; padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: #d9fff5; background: #155b54; cursor: pointer; }

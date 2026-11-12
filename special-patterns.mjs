@@ -110,13 +110,13 @@ function patternCard(pattern, samples = []) {
     if (pattern.chain) copy.append(element("p", pattern.chain, "pattern-chain"));
 
     const timetable = element("div", undefined, "pattern-timetable");
-    if (pattern.schedules.length) {
+    if (pattern.schedules.length && !samples.length) {
         pattern.schedules.forEach(schedule => timetable.append(scheduleBlock(schedule)));
     } else if (!samples.length) {
-        timetable.append(element("p", "参照時刻・保存ログはまだありません", "pattern-unregistered"));
+        timetable.append(element("p", "通過時刻は未登録です", "pattern-unregistered"));
     }
     card.append(header, copy, timetable);
-    if (samples.length) card.append(recordedSchedules(samples));
+    if (samples.length) card.append(recordedTimetable(samples, pattern.schedules));
     if (pattern.note) card.append(element("p", pattern.note, "pattern-note"));
     return card;
 }
@@ -156,62 +156,68 @@ export function combinePatterns(items) {
     }));
 }
 
-function recordedSchedules(samples) {
-    const block = element('section', undefined, 'pattern-recorded');
-    block.append(element('h4', `ログから自動反映 · ${samples.length}件`));
-    const label = element('label', '運転日・列番を選択');
-    const select = element('select');
+const timelineCache = new Map();
+
+function latestSamplePerTrain(samples) {
+    const latest = new Map();
     for (const sample of samples) {
-        const option = element('option', `${sample.serviceDate} · ${sample.trainNumber}列車 · ${clock(sample.firstSeen)}〜${clock(sample.lastSeen)}`);
-        option.value = String(sample.id); select.append(option);
+        const number = key(sample.trainNumber);
+        if (!latest.has(number)) latest.set(number, sample);
     }
-    label.append(select); block.append(label);
-    const summary = element('p', undefined, 'pattern-note');
-    const details = element('details');
-    details.append(element('summary', '各駅の記録・推定時刻'));
-    const body = element('div'); details.append(body); block.append(summary, details);
-    let revision = 0, loaded = false;
-    async function load() {
-        if (loaded) return;
-        const current = ++revision, id = select.value;
-        body.textContent = '保存ログの時刻を読み込み中…';
+    return [...latest.values()];
+}
+
+async function timelineFor(sample) {
+    if (!timelineCache.has(sample.id)) {
+        timelineCache.set(sample.id, request(`/api/patterns/${sample.id}`).catch(error => {
+            timelineCache.delete(sample.id);
+            throw error;
+        }));
+    }
+    return timelineCache.get(sample.id);
+}
+
+function recordedTimetable(samples, fallbackSchedules = []) {
+    const block = element('section', undefined, 'pattern-recorded');
+    block.append(element('h4', '通過時刻'));
+    const body = element('div', '時刻を更新中…', 'pattern-recorded-body');
+    block.append(body);
+    void (async () => {
         try {
-            const data = await request(`/api/patterns/${id}`);
-            if (current !== revision) return;
+            const representatives = latestSamplePerTrain(samples);
+            const results = await Promise.all(representatives.map(async sample => ({
+                sample,
+                data: await timelineFor(sample)
+            })));
             body.replaceChildren();
-            if (!data.timeline?.available) {
-                body.append(element('p', data.reason || '各駅の時刻を求めるための位置記録が不足しています。'));
-            } else {
+            let added = 0;
+            for (const { sample, data } of results) {
+                if (!data.timeline?.available) continue;
+                const schedule = element('section', undefined, 'pattern-schedule pattern-recorded-schedule');
+                if (representatives.length > 1) schedule.append(element('strong', `${sample.trainNumber}列車`));
                 const list = element('ol', undefined, 'pattern-recorded-stops');
                 for (const point of data.timeline.points) {
                     const row = element('li');
                     const end = point.endTime ? clock(point.endTime) : '';
-                    row.append(element('time', clock(point.time) + (end && end !== clock(point.time) ? `〜${end}` : '')),
-                        element('span', `${point.station}駅`),
-                        element('small', point.kind === 'observed' ? '実測' : '推定', `pattern-kind ${point.kind}`));
+                    row.append(
+                        element('time', clock(point.time) + (end && end !== clock(point.time) ? `〜${end}` : '')),
+                        element('span', `${point.station}駅`)
+                    );
                     list.append(row);
                 }
-                body.append(list, element('p', '実測は駅での在線確認時刻、推定は記録間を距離で補間した時刻です。確定した通過・発着時刻ではありません。', 'pattern-note'));
+                schedule.append(list);
+                body.append(schedule);
+                added++;
             }
-            loaded = true;
+            if (!added && fallbackSchedules.length) {
+                body.replaceChildren(...fallbackSchedules.map(scheduleBlock));
+            } else if (!added) {
+                body.append(element('p', '通過時刻は未登録です', 'pattern-unregistered'));
+            }
         } catch (error) {
-            if (current !== revision) return;
-            body.replaceChildren(element('p', error.message));
-            const retry = element('button', '再試行'); retry.onclick = () => void load(); body.append(retry);
+            body.replaceChildren(element('p', `時刻を更新できませんでした：${error.message}`, 'pattern-unregistered'));
         }
-    }
-    function selectSample() {
-        revision++; loaded = false;
-        const sample = samples.find(item => String(item.id) === select.value);
-        summary.textContent = `${sample.formation} · ${sample.range.text} ／ 初回確認 ${clock(sample.firstSeen)} → 最終確認 ${clock(sample.lastSeen)}`;
-        body.replaceChildren();
-        if (details.open) void load();
-    }
-    select.onchange = selectSample;
-    details.ontoggle = () => { if (details.open) void load(); };
-    selectSample();
-    // Known schedules show their latest recorded passage times immediately.
-    details.open = SPECIAL_TRAIN_PATTERNS.some(pattern => pattern.trains.includes(key(samples[0].trainNumber)));
+    })();
     return block;
 }
 
@@ -243,7 +249,7 @@ export async function renderSpecialPatterns(container) {
             container.replaceChildren(...combinePatterns(items).map(({ pattern, samples }) => patternCard(pattern, samples)));
             signature = nextSignature;
         }
-        if (status) status.textContent = `ログ ${items.length}件と同期済み · ${clock(new Date())}更新 · 表示中は毎分更新`;
+        if (status) status.textContent = `定スジを更新済み · ${clock(new Date())}更新 · 表示中は毎分更新`;
     } catch (error) {
         if (status) status.textContent = `自動更新できませんでした：${error.message}。「更新」で再試行できます。`;
     } finally { busy = false; }
