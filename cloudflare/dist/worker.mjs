@@ -649,8 +649,8 @@ function liveFormationMap(table, operations, group) {
   return items;
 }
 async function refreshLiveFormations(db, now, request = hub) {
-  const day = import_core.default.serviceDate(now), cacheKey = `live-formations:${day}`, cached = await read(db, cacheKey);
-  if (cached && Number.isFinite(Date.parse(cached.fetchedAt)) && now - Date.parse(cached.fetchedAt) < 12e4) return cached;
+  const day = import_core.default.serviceDate(now), cacheKey = `live-formations:${day}`, cached2 = await read(db, cacheKey);
+  if (cached2 && Number.isFinite(Date.parse(cached2.fetchedAt)) && now - Date.parse(cached2.fetchedAt) < 12e4) return cached2;
   const diagram = diagramForDay(day), groups = await Promise.all(["nankai", "koya"].map(async (group) => {
     const revisions = await request("diagram_revisions", { railroad_id: group });
     if (!Array.isArray(revisions)) throw Error(`${group}: \u30C0\u30A4\u30E4\u6539\u6B63\u4E00\u89A7\u304C\u4E0D\u6B63\u3067\u3059`);
@@ -1014,6 +1014,32 @@ async function handleAccountRequest(request, env) {
 var import_core2 = __toESM(require_core(), 1);
 var import_stations = __toESM(require_stations(), 1);
 var import_fleet2 = __toESM(require_fleet(), 1);
+
+// traffic.mjs
+var TRAFFIC_URL = "https://www.traffic.nankai.co.jp/railinfo/01.html?media=pc";
+function parseTraffic(html) {
+  const items = [];
+  for (const [id, name] of [["nankai", "\u5357\u6D77\u7DDA"], ["koya", "\u9AD8\u91CE\u7DDA"], ["semboku", "\u6CC9\u5317\u7DDA"]]) {
+    const section = html.match(new RegExp(`<section id="${id}-line-area">([\\s\\S]*?)</section>`));
+    if (!section) throw Error("\u904B\u884C\u60C5\u5831\u306E\u5F62\u5F0F\u304C\u5909\u308F\u308A\u307E\u3057\u305F");
+    const text = section[1].split('<div class="text-right">')[0].replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+    if (!text) throw Error("\u904B\u884C\u60C5\u5831\u304C\u7A7A\u3067\u3059");
+    if (text === "\u53EA\u4ECA\u300120\u5206\u4EE5\u4E0A\u306E\u5217\u8ECA\u306E\u9045\u308C\u306F\u3054\u3056\u3044\u307E\u305B\u3093\u3002") continue;
+    items.push({ line: id, name, text });
+  }
+  return items;
+}
+var cached = null;
+async function trafficInfo() {
+  if (cached && Date.now() - cached.time < 6e4) return cached.data;
+  const r = await fetch(TRAFFIC_URL, { signal: AbortSignal.timeout(1e4) });
+  if (!r.ok) throw Error("\u53D6\u5F97\u5931\u6557");
+  const data = { items: parseTraffic(await r.text()), checkedAt: (/* @__PURE__ */ new Date()).toISOString(), source: TRAFFIC_URL };
+  cached = { time: Date.now(), data };
+  return data;
+}
+
+// worker.mjs
 var { specialService } = import_core2.default;
 var { trajectoryPositions, buildTimeline } = import_stations.default;
 var { mergeFleetStatus } = import_fleet2.default;
@@ -1065,6 +1091,15 @@ var eventSelect = `SELECT events.*,
 async function handle(request, env) {
   const u = new URL(request.url), p = u.pathname, db = env.DB;
   try {
+    if (p === "/api/traffic") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } });
+      if (request.method !== "GET") return publicJson({ error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+      try {
+        return publicJson(await trafficInfo());
+      } catch {
+        return new Response(JSON.stringify({ error: "\u904B\u884C\u60C5\u5831\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093" }), { status: 503, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
+      }
+    }
     const accountResponse = await handleAccountRequest(request, env);
     if (accountResponse) return accountResponse;
     if (p === "/api/patterns" || p.startsWith("/api/patterns/")) {

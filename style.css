@@ -693,6 +693,13 @@ a { color: inherit; text-decoration: none; }
     letter-spacing: .08em;
 }
 .train-kind { overflow: hidden; color: #adc3c7; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.train-delay { margin: 0 0 5px; padding: 3px 4px; border-radius: 5px; color: #302000; background: #ffd166; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.train-delay.severe { color: #fff; background: #c42c44; }
+.traffic-banner { margin-bottom: 18px; padding: 14px 16px; border: 1px solid #f3b553; border-left: 5px solid #f3b553; border-radius: 12px; background: #37291e; color: #fff4df; font-size: 14px; line-height: 1.65; }
+.traffic-banner[hidden] { display: none; }
+.traffic-banner strong { color: #ffd166; }
+.traffic-banner p { margin: 5px 0 10px; }
+.traffic-banner a { color: #ffdca0; font-size: 12px; }
 .train-number { font-size: 17px; font-weight: 900; }
 .train-cars { color: #adc3c7; font-size: 9px; }
 .train-formation {

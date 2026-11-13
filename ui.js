@@ -557,6 +557,7 @@ function showTrains(
 
         trainElement.innerHTML = `
             ${irregularBadge}
+            ${getDelayMinutes(train) > 0 ? `<div class="train-delay${getDelayMinutes(train) >= 10 ? ' severe' : ''}">${escapeHtml(getDelayMinutes(train))}分遅れ</div>` : ''}
 
             <div class="train-kind">
                 ${escapeHtml(kindInfo.trainType)}
@@ -623,12 +624,13 @@ function getPositionText(train) {
 }
 
 function getDelayMinutes(train) {
-    return (
+    const value = Number(
         train.delay_minutes ??
         train.delay_min ??
         train.delay ??
         0
     );
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
 function getDoorText(train) {

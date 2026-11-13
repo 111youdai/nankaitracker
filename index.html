@@ -13,7 +13,7 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261113a">
+    <link rel="stylesheet" href="style.css?v=20261113b">
 </head>
 <body>
     <section id="authGate" class="auth-gate" aria-live="polite">
@@ -93,6 +93,7 @@
         </section>
 
         <section id="routeWorkspace" class="route-workspace" hidden>
+            <aside id="trafficBanner" class="traffic-banner" aria-live="polite" hidden></aside>
             <div class="workspace-heading">
                 <div>
                     <span class="eyebrow">LIVE ROUTE</span>
@@ -207,7 +208,8 @@
 
     <script src="api.js?v=20261110b"></script>
     <script src="account.js?v=20261110b"></script>
-    <script src="ui.js?v=20261110b"></script>
+    <script src="ui.js?v=20261113b"></script>
+    <script src="traffic.js?v=20261113b"></script>
     <script type="module" src="script.js?v=20261113a"></script>
 </body>
 </html>

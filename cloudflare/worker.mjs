@@ -3,6 +3,7 @@ import {handleAccountRequest,authenticateAccount,canAccessRecords,accountJson,co
 import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
+import {trafficInfo} from './traffic.mjs';
 const {specialService}=core;
 const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
@@ -50,6 +51,12 @@ const eventSelect=`SELECT events.*,
 export async function handle(request,env){
  const u=new URL(request.url),p=u.pathname,db=env.DB;
  try{
+  if(p==='/api/traffic'){
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS'}});
+   if(request.method!=='GET')return publicJson({error:'許可されていない操作です'},405);
+   try{return publicJson(await trafficInfo());}
+   catch{return new Response(JSON.stringify({error:'運行情報を取得できません'}),{status:503,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});}
+  }
   const accountResponse=await handleAccountRequest(request,env);
   if(accountResponse)return accountResponse;
   if(p==='/api/patterns'||p.startsWith('/api/patterns/')){
