@@ -4,6 +4,7 @@ import core from './core.cjs';
 import stations from './stations.cjs';
 import fleet from './fleet.cjs';
 import {trafficInfo} from './traffic.mjs';
+import {captureSchedules,enrichedTimeline,inferredDepot,schedulePoints} from './record-schedules.mjs';
 const {specialService}=core;
 const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
@@ -40,10 +41,19 @@ function displayRange(firstPosition,lastPosition,special){
 function decodeEvent(e){
  const {second_payload,previous_payload,...event}=e,first=JSON.parse(e.first_payload||e.last_payload),second=second_payload?JSON.parse(second_payload):null,previous=previous_payload?JSON.parse(previous_payload):null,last=JSON.parse(e.last_payload);
  const firstPosition=trajectoryPositions(second?[first,second]:[first],{eventStart:true})[0],lastPositions=trajectoryPositions(previous?[previous,last]:[last],{eventEnd:true}),lastPosition=lastPositions.at(-1);
- const special=specialService(e.train_number,e.service_date),range=displayRange(firstPosition,lastPosition,special);
- return {...event,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},display_range:range,special};
+ const special=specialService(e.train_number,e.service_date),range=displayRange(firstPosition,lastPosition,special),schedule=e.saved_schedule?JSON.parse(e.saved_schedule):null;
+ const official=schedulePoints(schedule,e.service_date),endpoints={};
+ for(const side of ['first','last']){
+  const terminal=side==='first'?schedule?.departure:schedule?.arrival;
+  const depot=inferredDepot(e,side==='first'?first:last,side);
+  if(terminal){range[side]=depotPlace(terminal);const point=official.find(p=>p.station===terminal);if(point)endpoints[side]={...point,station:terminal};}
+  if(depot&&(!terminal||terminal===stations.stationName(depot.stationId))){range[side]=depot.station;endpoints[side]=depot;}
+ }
+ range.text=`${range.first} → ${range.last}`;
+ return {...event,official_schedule:schedule,endpoint_times:endpoints,formation:JSON.parse(e.formation),baseline:JSON.parse(e.baseline),first_payload:first,last_payload:last,first_position:firstPosition,last_position:lastPosition,observed_range:{first:firstPosition,last:lastPosition,text:`初回：${firstPosition.text} ／ 最終：${lastPosition.text}`},display_range:range,special};
 }
 const eventSelect=`SELECT events.*,
+ (SELECT value FROM meta WHERE key='schedule:'||events.id) AS saved_schedule,
  (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1) AS first_payload,
  (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time,o.id LIMIT 1 OFFSET 1) AS second_payload,
  (SELECT payload FROM observations o WHERE o.event_id=events.id ORDER BY o.source_time DESC,o.id DESC LIMIT 1 OFFSET 1) AS previous_payload
@@ -69,20 +79,21 @@ export async function handle(request,env){
     const before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
     if(!Number.isSafeInteger(before)||before<1)return accountJson(request,{error:'検索条件が不正です'},400);
     const rows=(await db.prepare(eventSelect+' WHERE events.id<? AND events.train_key NOT IN (?) ORDER BY events.id DESC LIMIT 100').bind(before,...core.IGNORED_TRAIN_KEYS).all()).results;
-    const items=rows.map(decodeEvent).map(e=>({id:e.id,trainNumber:e.train_number,trainKey:e.train_key,serviceDate:e.service_date,group:e.group_name,firstSeen:e.first_seen,lastSeen:e.last_seen,formation:e.formation.text,range:e.display_range,firstStation:e.first_position.current,lastStation:e.last_position.current,special:e.special}));
+    const items=rows.map(decodeEvent).map(e=>({id:e.id,trainNumber:e.train_number,trainKey:e.train_key,serviceDate:e.service_date,group:e.group_name,firstSeen:e.first_seen,lastSeen:e.last_seen,scheduleVersion:e.official_schedule?.fetchedAt||null,formation:e.formation.text,range:e.display_range,firstStation:e.first_position.current,lastStation:e.last_position.current,special:e.special}));
     return accountJson(request,{items,next:rows.length===100?rows.at(-1).id:null});
    }
    const match=p.match(/^\/api\/patterns\/(\d+)$/);
    if(!match)return accountJson(request,{error:'見つかりません'},404);
    const id=Number(match[1]);
    if(!Number.isSafeInteger(id)||id<1)return accountJson(request,{error:'IDが不正です'},400);
-   const event=await db.prepare('SELECT train_key FROM events WHERE id=?').bind(id).first();
+   const event=await db.prepare(eventSelect+' WHERE events.id=?').bind(id).first();
    if(!event||core.ignoredTrain(event.train_key))return accountJson(request,{error:'記録が見つかりません'},404);
    const rows=(await db.prepare('SELECT source_time,payload FROM observations WHERE event_id=? ORDER BY source_time,id LIMIT 2001').bind(id).all()).results;
    // Use actual observations only here: known reference schedules must not be
    // presented as a recorded run. Never silently present a truncated history.
    if(rows.length>2000)return accountJson(request,{timeline:null,reason:'記録が長いため、元のログで確認してください'});
-   return accountJson(request,{timeline:stations.observedTimeline(rows.map(row=>({...row,payload:JSON.parse(row.payload)})))});
+   const observations=rows.map(row=>({...row,payload:JSON.parse(row.payload)}));
+   return accountJson(request,{timeline:enrichedTimeline(event,observations,event.saved_schedule?JSON.parse(event.saved_schedule):null,stations.observedTimeline(observations))});
   }
   if(p==='/api/live-formations'){
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Max-Age':'86400'}});
@@ -110,7 +121,7 @@ export async function handle(request,env){
    const liveStale=!live||!Number.isFinite(Date.parse(live.fetchedAt))||Date.now()-Date.parse(live.fetchedAt)>900000;
    if(liveStale){try{live=await refreshLiveFormations(db,new Date());}catch(e){console.error('live formations refresh',e.message);}}
    const normalOperations=Object.values(live?.items||{}).map(item=>({formation:item.formation,serviceDate:live.serviceDate}));
-   const rows=(await db.prepare(eventSelect+' ORDER BY events.last_seen DESC,events.id DESC LIMIT 500').all()).results,events=rows.map(decodeEvent).map(e=>({id:e.id,serviceDate:e.service_date,groupName:e.group_name,trainNumber:e.train_number,firstSeen:e.first_seen,lastSeen:e.last_seen,formation:e.formation,firstPosition:e.first_position,lastPosition:e.last_position,special:e.special}));
+   const rows=(await db.prepare(eventSelect+' ORDER BY events.last_seen DESC,events.id DESC LIMIT 500').all()).results,events=rows.map(decodeEvent).map(e=>({id:e.id,serviceDate:e.service_date,groupName:e.group_name,trainNumber:e.train_number,firstSeen:e.first_seen,lastSeen:e.last_seen,scheduleVersion:e.official_schedule?.fetchedAt||null,formation:e.formation,firstPosition:e.first_position,lastPosition:e.last_position,special:e.special}));
    return json(mergeFleetStatus(snapshot,events,normalOperations));
   }
   if(p.startsWith('/api/logs')){
@@ -142,9 +153,9 @@ export async function handle(request,env){
    }
    const timelineMatch=p.match(/^\/api\/logs\/(\d+)\/timeline$/);
    if(timelineMatch){const id=Number(timelineMatch[1]);if(!Number.isSafeInteger(id)||id<1)return json({error:'IDが不正です'},400);
-    const event=await db.prepare('SELECT train_number,service_date FROM events WHERE id=?').bind(id).first();if(!event)return json({error:'記録が見つかりません'},404);
+    const event=await db.prepare(eventSelect+' WHERE events.id=?').bind(id).first();if(!event)return json({error:'記録が見つかりません'},404);
     const rows=(await db.prepare('SELECT source_time,payload FROM observations WHERE event_id=? ORDER BY source_time,id LIMIT 2000').bind(id).all()).results.map(row=>({...row,payload:JSON.parse(row.payload)}));
-    return json({timeline:buildTimeline(rows,{trainNumber:event.train_number,serviceDate:event.service_date})});
+    return json({timeline:enrichedTimeline(event,rows,event.saved_schedule?JSON.parse(event.saved_schedule):null,buildTimeline(rows,{trainNumber:event.train_number,serviceDate:event.service_date}))});
    }
    return json({error:'見つかりません'},404);
   }
@@ -167,8 +178,9 @@ export default {
    // SQL lease avoids double processing if scheduled executions overlap.
    const minute=Math.floor(event.scheduledTime/60000),lease=await env.DB.prepare(`INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)`).bind('lease:'+minute,JSON.stringify(now.toISOString())).run();
    if(!lease.meta.changes)return;
-   try{await poll(env.DB,now);}catch(e){console.error('monitor',e.message);await put(env.DB,'monitor',{lastPoll:now.toISOString(),lastSuccess:null,intervalSeconds:60,groups:{},feedError:e.message}).run();throw e;}
+   try{await poll(env.DB,now,undefined,8);}catch(e){console.error('monitor',e.message);await put(env.DB,'monitor',{lastPoll:now.toISOString(),lastSuccess:null,intervalSeconds:60,groups:{},feedError:e.message}).run();throw e;}
    finally{await env.DB.prepare("DELETE FROM meta WHERE key LIKE 'lease:%' AND key<?").bind('lease:'+(minute-60)).run();}
+   try{await captureSchedules(env.DB,now);}catch(e){console.error('schedule capture',e.message);}
   }
  }
 };

@@ -12,7 +12,7 @@ import {
     renderTenhamaFleet,
     renderTenhamaTrains
 } from "./tenhama.mjs?v=20261104k";
-import { renderSpecialPatterns } from "./special-patterns.mjs?v=20261116a";
+import { renderSpecialPatterns } from "./special-patterns.mjs?v=20261116c";
 
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;

@@ -133,7 +133,7 @@ export async function classify(db,row,b,maxCandidates=10){
  await db.batch(statements); // D1 batch is atomic: no lost queue entry on a failed write.
  return {saved:Math.min(count,maxCandidates),remaining:remaining.length};
 }
-export async function poll(db,now,request=requestJson){
+export async function poll(db,now,request=requestJson,maxCandidates=10){
  const previous=await read(db,'monitor');
  const status={baseline:previous?.baseline||null,lastPoll:now.toISOString(),lastSuccess:null,feedError:null,baselineError:null,groups:{},intervalSeconds:60};
  try{
@@ -156,7 +156,7 @@ export async function poll(db,now,request=requestJson){
   status.lastSuccess=now.toISOString();
  }catch(e){status.feedError=e.message;}
  // Bound each invocation to <50 D1 queries on Free, even when many unusual trains appear.
- let budget=10;
+ let budget=maxCandidates;
  const pending=(await db.prepare('SELECT * FROM pending ORDER BY source_time,id LIMIT 6').all()).results;
  const cache=new Map();
  for(const row of pending){

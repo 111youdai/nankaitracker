@@ -12,10 +12,10 @@ async function api(url,options={}){
 function error(e){$('error').textContent=e.message;}
 function timelineTime(point){const start=point.timeLabel||clock(point.time),end=point.endTimeLabel||(point.endTime?clock(point.endTime):'');return end&&end!==start?`${start}〜${end}`:start;}
 function timelineView(timeline){
- const box=el('section',undefined,'timeline');box.append(el('h3','推定通過時刻'));
+ const box=el('section',undefined,'timeline');box.append(el('h3','通過・発着時刻'));
  if(!timeline?.available){box.append(el('p','この記録は、距離計算に必要な位置がまだ足りません。','muted'));return box;}
- const summary=el('div',undefined,'timeline-summary');summary.append(el('span',`記録区間 ${timeline.distanceKm} km`),el('span',`平均 ${timeline.averageSpeedKmh} km/h`));box.append(summary);
- const list=el('ol',undefined,'timeline-list');for(const point of timeline.points){const row=el('li'),when=el('time',timelineTime(point)),station=el('span',point.station+'駅'),kind=el('small',point.kind==='observed'?'実測':point.kind==='known'?'既知時刻':'推定','timeline-kind '+point.kind);row.append(when,station,kind);if(point.note)row.title=point.note;list.append(row);}box.append(list,el('p',timeline.note,'timeline-note'));return box;
+ if(timeline.distanceKm!=null){const summary=el('div',undefined,'timeline-summary');summary.append(el('span',`記録区間 ${timeline.distanceKm} km`),el('span',`平均 ${timeline.averageSpeedKmh} km/h`));box.append(summary);}
+ const list=el('ol',undefined,'timeline-list');for(const point of timeline.points){const row=el('li'),when=el('time',timelineTime(point)),station=el('span',point.station+(point.facility?'':'駅')),kind=el('small',point.kind==='observed'?'実測':point.kind==='official'?'公式予定':point.kind==='known'?'既知時刻':'推定','timeline-kind '+point.kind);row.append(when,station,kind);if(point.note)row.title=point.note;list.append(row);}box.append(list,el('p',timeline.note,'timeline-note'));return box;
 }
 function showView(name){
  const fleet=name==='fleet';$('logView').hidden=fleet;$('fleetView').hidden=!fleet;
@@ -58,6 +58,7 @@ function groupRuns(items){
  return groups.sort((a,b)=>Math.max(...b.map(x=>x.id))-Math.max(...a.map(x=>x.id)));
 }
 function chainRange(events){const first=events[0],last=events.at(-1);return `${first.display_range?.first||'確認できません'} → ${last.display_range?.last||'確認できません'}`;}
+function endpointTimes(events){return events.flatMap(e=>Object.entries(e.endpoint_times||{}).map(([side,p])=>`${p.station} ${clock(p.time)}${side==='first'?'発':'着'}（${p.kind==='official'?'公式予定':'推定'}）`)).join(' ／ ');}
 function chainGroups(events){return [...new Set(events.map(event=>event.group_name==='nankai'?'南海線系統':'高野線系統'))].join(' → ');}
 function verifiedFormation(events){return [...events].reverse().find(event=>formationKey(event))?.formation?.text||events.at(-1).formation?.text||'編成未確認';}
 function appendHistory(history,event,data,result,linked){
@@ -76,7 +77,8 @@ function card(input){
   const explicit=trainKey(e.train_number)==='8450'&&['8673','8070'].includes(trainKey(lastEvent.train_number)),box=el('div',undefined,'known-service chain-service');
   box.append(el('strong',explicit?'千代田入場回送':'なんば折返しを含む一連の運転'),el('div','列番：'+numbers),el('div','運転区間：'+chainRange(events)),el('small','同一編成・なんばでの折返し・前後の確認時刻から一連の運転としてまとめています。'));a.append(box);
  }else if(known){const box=el('div',undefined,'known-service');box.append(el('strong',known.label));if(known.route)box.append(el('div','区間：'+known.route));if(known.schedule)box.append(el('div','時刻：'+known.schedule));if(known.note)box.append(el('small',known.note));a.append(box);}
- const details=el('div',undefined,'details'),rows=[['編成（最後に検証できた値）',verifiedFormation(events)],['運行日・系統',`${e.service_date} ／ ${chainGroups(events)}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(lastEvent.last_seen)}`],['推定した運転区間',chainRange(events)],['最終確認地点',lastEvent.display_range?.last||'確認できません']];
+ const details=el('div',undefined,'details'),rows=[['編成（最後に検証できた値）',verifiedFormation(events)],['運行日・系統',`${e.service_date} ／ ${chainGroups(events)}`],['初回 → 最終確認',`${time(e.first_seen)} → ${time(lastEvent.last_seen)}`],['運転区間（予定・推定を含む）',chainRange(events)],['最終確認地点',lastEvent.last_position?.text||'確認できません']];
+ if(endpointTimes(events))rows.push(['発着時刻（公式予定・推定）',endpointTimes(events)]);
  if(linked)rows.splice(1,0,['列番のつながり',numbers]);
  for(const [label,value] of rows){const cell=el('div',label,'muted');cell.append(el('b',value));details.append(cell);}a.append(details);
  const button=el('button',linked?'各列車の推定時刻・在線履歴':'推定時刻・在線履歴'),history=el('div',undefined,'history');history.hidden=true;a.append(button,history);

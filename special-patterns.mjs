@@ -169,12 +169,12 @@ function latestSamplePerTrain(samples) {
 
 async function timelineFor(sample) {
     const cached = timelineCache.get(sample.id);
-    if (!cached || cached.lastSeen !== sample.lastSeen) {
+    if (!cached || cached.lastSeen !== sample.lastSeen || cached.scheduleVersion !== sample.scheduleVersion) {
         const promise = request(`/api/patterns/${sample.id}`).catch(error => {
             timelineCache.delete(sample.id);
             throw error;
         });
-        timelineCache.set(sample.id, { lastSeen: sample.lastSeen, promise });
+        timelineCache.set(sample.id, { lastSeen: sample.lastSeen, scheduleVersion: sample.scheduleVersion, promise });
     }
     return timelineCache.get(sample.id).promise;
 }
@@ -203,7 +203,7 @@ function recordedTimetable(samples, fallbackSchedules = []) {
                     const end = point.endTime ? clock(point.endTime) : '';
                     row.append(
                         element('time', clock(point.time) + (end && end !== clock(point.time) ? `〜${end}` : '')),
-                        element('span', `${point.station}駅`)
+                        element('span', `${point.station}${point.facility?'':'駅'}${point.facility?'（推定）':point.kind==='official'?'（公式予定）':''}`)
                     );
                     list.append(row);
                 }
