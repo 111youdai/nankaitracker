@@ -82,6 +82,7 @@ var require_core = __commonJS({
       "8376": { category: "chiyoda-test", label: "\u5343\u4EE3\u7530\u51FA\u5834\u8A66\u904B\u8EE2\uFF08\u4E0A\u308A\uFF09", route: "\u5343\u4EE3\u7530\u51FA\u5834\u30FB\u4E0A\u308A", note: "\u5343\u4EE3\u7530\u5DE5\u5834\u51FA\u5834\u5F8C\u306E\u8A66\u904B\u8EE2\u306B\u4F7F\u308F\u308C\u308B\u5217\u756A" },
       "8679": { category: "chiyoda-test", label: "\u5343\u4EE3\u7530\u51FA\u5834\u8A66\u904B\u8EE2\uFF08\u4E0B\u308A\uFF09", route: "\u5343\u4EE3\u7530\u51FA\u5834\u30FB\u4E0B\u308A", note: "\u5343\u4EE3\u7530\u5DE5\u5834\u51FA\u5834\u5F8C\u306E\u8A66\u904B\u8EE2\u306B\u4F7F\u308F\u308C\u308B\u5217\u756A" },
       "9185": { category: "scrap-transfer", label: "\u81E8\u6642\u56DE\u9001", route: "\u5343\u4EE3\u7530 \u2192 \u5C0F\u539F\u7530", note: "\u5343\u4EE3\u7530\u767A\u30FB\u5C0F\u539F\u7530\u884C\u304D\u306E\u5EC3\u56DE\u30B9\u30B8\u3068\u3057\u3066\u77E5\u3089\u308C\u308B\u5217\u756A" },
+      "9183": { category: "scrap-transfer", label: "\u81E8\u6642\u56DE\u9001", route: "\u5343\u4EE3\u7530 \u2192 \u5C0F\u539F\u7530", note: "\u5C0F\u539F\u7530\u884C\u304D\u81E8\u6642\u56DE\u9001\uFF089185\u5217\u8ECA\u3068\u540C\u3058\u30B0\u30EB\u30FC\u30D7\uFF09" },
       "8680": { category: "temporary-deadhead", label: "\u81E8\u6642\u56DE\u9001\u30B9\u30B8", route: "\u5C0F\u539F\u7530 \u2192 \u5343\u4EE3\u7530", schedule: "\u5C0F\u539F\u7530 17:01\u767A \u2192 \u5343\u4EE3\u7530 17:24\u7740" },
       "8721": { category: "liner-substitute-deadhead", label: "\u6CC9\u5317\u30E9\u30A4\u30CA\u30FC\u4EE3\u8D70\u95A2\u9023\u56DE\u9001", route: "\u4F4F\u30CE\u6C5F \u2192 \u306A\u3093\u3070", schedule: "\u4F4F\u30CE\u6C5F 13:50\u767A \u2192 \u306A\u3093\u3070 14:02\u7740", note: "11000\u7CFB\u306E\u9AD8\u91CE\u7DDA\u7279\u6025\u8CB8\u51FA\u6642\u306B\u3001\u6CC9\u5317\u30E9\u30A4\u30CA\u30FC\u3092\u4EE3\u8D70\u3059\u308B\u30B5\u30B6\u30F3\u8ECA\u306E\u56DE\u9001" },
       "8722": { category: "liner-substitute-deadhead", label: "\u6CC9\u5317\u30E9\u30A4\u30CA\u30FC\u4EE3\u8D70\u95A2\u9023\u30FB\u5343\u4EE3\u7530\u56DE\u9001", route: "\u306A\u3093\u3070 \u2192 \u5343\u4EE3\u7530", schedule: "\u306A\u3093\u3070 14:14\u767A \u2192 \u5343\u4EE3\u7530 14:56\u7740", note: "11000\u7CFB\u306E\u9AD8\u91CE\u7DDA\u7279\u6025\u8CB8\u51FA\u6642\u306B\u3001\u6CC9\u5317\u30E9\u30A4\u30CA\u30FC\u3092\u4EE3\u8D70\u3059\u308B\u30B5\u30B6\u30F3\u8ECA\u306E\u56DE\u9001" },
@@ -500,22 +501,27 @@ var require_stations = __commonJS({
       const value = Number(id);
       return DISTANCE_ROUTES.find((route) => route.stations.includes(value)) || null;
     }
-    function observationCoordinate(payload) {
+    function observationCoordinate(payload, nextPayload) {
       const route = distanceRoute(payload?.station_id);
       if (!route) return null;
       const id = Number(payload.station_id), index = route.stations.indexOf(id), running = payload.next_station_id != null && payload.next_station_id !== "";
       let value = route.km[id];
       if (running) {
-        const next = Number(payload.next_station_id), nextIndex = route.stations.indexOf(next), step = nextIndex >= 0 && Math.abs(nextIndex - index) === 1 ? nextIndex - index : directionStep(payload.direction), adjacent = route.stations[index + step];
+        const next = Number(payload.next_station_id), nextIndex = route.stations.indexOf(next), validNext = nextIndex >= 0 && Math.abs(nextIndex - index) === 1;
+        const arriving = Number(nextPayload?.station_id) === id && nextPayload?.next_station_id == null;
+        const step = validNext ? nextIndex - index : directionStep(payload.direction) * (arriving ? -1 : 1), adjacent = route.stations[index + step];
         if (adjacent != null) value = (value + route.km[adjacent]) / 2;
       }
       return { route, id, index, km: value, running };
     }
     function observedTimeline(rows = []) {
-      const raw = rows.map((row) => {
-        const coordinate = observationCoordinate(row.payload), time = Date.parse(row.source_time);
+      const ordered = [...rows].sort((a, b) => Date.parse(a.source_time) - Date.parse(b.source_time));
+      const raw = ordered.map((row, index) => {
+        let following = index + 1;
+        while (following < ordered.length && Number(ordered[following].payload?.station_id) === Number(row.payload?.station_id) && ordered[following].payload?.next_station_id != null) following++;
+        const coordinate = observationCoordinate(row.payload, ordered[following]?.payload), time = Date.parse(row.source_time);
         return coordinate && Number.isFinite(time) ? { ...coordinate, time, payload: row.payload } : null;
-      }).filter(Boolean).sort((a, b) => a.time - b.time);
+      }).filter(Boolean);
       if (raw.length < 2) return null;
       const counts = /* @__PURE__ */ new Map();
       for (const item of raw) counts.set(item.route.key, (counts.get(item.route.key) || 0) + 1);
@@ -523,7 +529,8 @@ var require_stations = __commonJS({
       if (same.length < 2) return null;
       const first = same[0], candidate = same.find((item) => Math.abs(item.km - first.km) >= 0.2);
       if (!candidate) return null;
-      const direction = Math.sign(candidate.km - first.km), anchors = [];
+      const votes = same.reduce((sum, item) => sum + directionStep(item.payload.direction), 0);
+      const direction = Math.sign(votes) || Math.sign(same.at(-1).km - first.km) || Math.sign(candidate.km - first.km), anchors = [];
       for (const item of same) {
         const previous = anchors.at(-1);
         if (!previous || direction * (item.km - previous.km) >= -0.25) anchors.push(item);

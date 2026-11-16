@@ -99,20 +99,27 @@ function knownChiyodaEntry(trainNumber,serviceDate){
  return {available:true,method:'known-distance',distanceKm:32.6,averageSpeedKmh:round(32.6/(48/60)),averageIncludesStops:false,points:[...outbound,...inbound.slice(1)],note:'既知時刻を固定し、その間の各駅は営業キロ比で補間しています。なんばでの6分間は平均速度から除外しています。'};
 }
 function distanceRoute(id){const value=Number(id);return DISTANCE_ROUTES.find(route=>route.stations.includes(value))||null;}
-function observationCoordinate(payload){
+function observationCoordinate(payload,nextPayload){
  const route=distanceRoute(payload?.station_id);if(!route)return null;
  const id=Number(payload.station_id),index=route.stations.indexOf(id),running=payload.next_station_id!=null&&payload.next_station_id!=='';
  let value=route.km[id];
- if(running){const next=Number(payload.next_station_id),nextIndex=route.stations.indexOf(next),step=nextIndex>=0&&Math.abs(nextIndex-index)===1?nextIndex-index:directionStep(payload.direction),adjacent=route.stations[index+step];if(adjacent!=null)value=(value+route.km[adjacent])/2;}
+ if(running){const next=Number(payload.next_station_id),nextIndex=route.stations.indexOf(next),validNext=nextIndex>=0&&Math.abs(nextIndex-index)===1;
+  // An invalid cross-line marker may describe the approach to this station.
+  const arriving=Number(nextPayload?.station_id)===id&&nextPayload?.next_station_id==null;
+  const step=validNext?nextIndex-index:directionStep(payload.direction)*(arriving?-1:1),adjacent=route.stations[index+step];if(adjacent!=null)value=(value+route.km[adjacent])/2;}
  return {route,id,index,km:value,running};
 }
 function observedTimeline(rows=[]){
- const raw=rows.map(row=>{const coordinate=observationCoordinate(row.payload),time=Date.parse(row.source_time);return coordinate&&Number.isFinite(time)?{...coordinate,time,payload:row.payload}:null;}).filter(Boolean).sort((a,b)=>a.time-b.time);
+ const ordered=[...rows].sort((a,b)=>Date.parse(a.source_time)-Date.parse(b.source_time));
+ const raw=ordered.map((row,index)=>{let following=index+1;
+  while(following<ordered.length&&Number(ordered[following].payload?.station_id)===Number(row.payload?.station_id)&&ordered[following].payload?.next_station_id!=null)following++;
+  const coordinate=observationCoordinate(row.payload,ordered[following]?.payload),time=Date.parse(row.source_time);return coordinate&&Number.isFinite(time)?{...coordinate,time,payload:row.payload}:null;}).filter(Boolean);
  if(raw.length<2)return null;
  const counts=new Map();for(const item of raw)counts.set(item.route.key,(counts.get(item.route.key)||0)+1);
  const route=[...counts].sort((a,b)=>b[1]-a[1])[0]?.[0],same=raw.filter(item=>item.route.key===route);if(same.length<2)return null;
  const first=same[0],candidate=same.find(item=>Math.abs(item.km-first.km)>=0.2);if(!candidate)return null;
- const direction=Math.sign(candidate.km-first.km),anchors=[];
+ const votes=same.reduce((sum,item)=>sum+directionStep(item.payload.direction),0);
+ const direction=Math.sign(votes)||Math.sign(same.at(-1).km-first.km)||Math.sign(candidate.km-first.km),anchors=[];
  for(const item of same){const previous=anchors.at(-1);if(!previous||direction*(item.km-previous.km)>=-0.25)anchors.push(item);}
  const last=anchors.at(-1),distance=Math.abs(last.km-first.km),hours=(last.time-first.time)/3600000;if(distance<0.2||hours<=0)return null;
  const speed=distance/hours;if(speed>160)return null;

@@ -16,7 +16,7 @@ export const SPECIAL_TRAIN_PATTERNS = Object.freeze([
         note: "列番を検出した場合は千代田出場として記録します。"
     },
     {
-        trains: ["9185"],
+        trains: ["9183", "9185"],
         category: "臨時回送",
         title: "千代田発・小原田行き臨時回送",
         route: "千代田 → 小原田",
@@ -168,13 +168,15 @@ function latestSamplePerTrain(samples) {
 }
 
 async function timelineFor(sample) {
-    if (!timelineCache.has(sample.id)) {
-        timelineCache.set(sample.id, request(`/api/patterns/${sample.id}`).catch(error => {
+    const cached = timelineCache.get(sample.id);
+    if (!cached || cached.lastSeen !== sample.lastSeen) {
+        const promise = request(`/api/patterns/${sample.id}`).catch(error => {
             timelineCache.delete(sample.id);
             throw error;
-        }));
+        });
+        timelineCache.set(sample.id, { lastSeen: sample.lastSeen, promise });
     }
-    return timelineCache.get(sample.id);
+    return timelineCache.get(sample.id).promise;
 }
 
 function recordedTimetable(samples, fallbackSchedules = []) {
