@@ -609,6 +609,14 @@ function getPositionText(train) {
             train.station_id
         ] || "位置不明";
 
+    // Koya's running marker can refer to an unrelated main-line station ID.
+    if (Number(train.line_id) === 2 && Number(train.station_id) >= 95 &&
+        Number(train.station_id) <= 136 && train.next_station_id != null &&
+        !(Number(train.next_station_id) >= 95 && Number(train.next_station_id) <= 136 &&
+          Math.abs(Number(train.next_station_id) - Number(train.station_id)) === 1)) {
+        return `${current}付近（走行中）`;
+    }
+
     const next =
         train.next_station_id == null
             ? null
@@ -925,18 +933,6 @@ async function openDetail(train) {
         </h2>
         <p>列車情報を取得中...</p>
     `;
-
-    if (/回送/.test(kindInfo.trainType)) {
-        renderTrainDetail({
-            content,
-            train,
-            kindInfo,
-            formationInfo,
-            warningText:
-                "回送列車のため、列車位置データから表示しています。"
-        });
-        return;
-    }
 
     try {
         const detail =
