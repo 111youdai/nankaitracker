@@ -11,7 +11,7 @@ import {
     getTenhamaRouteConfig,
     renderTenhamaFleet,
     renderTenhamaTrains
-} from "./tenhama.mjs?v=20261104k";
+} from "./tenhama.mjs?v=20261119a";
 import { renderSpecialPatterns } from "./special-patterns.mjs?v=20261116c";
 
 window.getTrainKindByNumber = getTrainKindByNumber;

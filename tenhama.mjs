@@ -1,9 +1,9 @@
 import {
     TENHAMA_STATIONS,
     TENHAMA_TRIPS,
-    TENHAMA_VEHICLES,
-    TENHAMA_SPECIAL_BY_DATE
+    TENHAMA_VEHICLES
 } from "./tenhama-data.mjs";
+import { TENHAMA_SPECIAL_BY_DATE } from "./tenhama-assignments.mjs";
 
 const JST_TIME_ZONE = "Asia/Tokyo";
 
@@ -69,6 +69,7 @@ function isFeaturedVehicle(vehicleId, vehicleName) {
 }
 
 const VEHICLE_ICON_THEMES = Object.freeze({
+    UNKNOWN: { base: "#74858b", type: "unknown", destination: "確認中" },
     TH2101: { base: "#f0d993", type: "re", destination: "掛川" },
     TH2102: { base: "#e9d7ad", type: "kiha", destination: "回送" },
     TH2103: { base: "#f2f5f2", type: "catalyzer", destination: "掛川" },
@@ -87,6 +88,12 @@ const VEHICLE_ICON_THEMES = Object.freeze({
 
 function getDetailedLivery(vehicleId, type) {
     switch (type) {
+        case "unknown":
+            return `
+                <path d="M15 18h66v88H15z" fill="#6c7c82"/>
+                <path d="M42 25h12v69H42z" fill="#839197"/>
+                <path d="M15 84h66v4H15z" fill="#aab6ba"/>
+                <text x="48" y="101" text-anchor="middle" font-size="11" font-weight="900" fill="#edf4f5">?</text>`;
         case "re":
             return `
                 <path d="M15 19h66v57H15z" fill="#175c35"/>
@@ -207,7 +214,8 @@ function getTh2100Icon(vehicleId, theme, label, size) {
         eva: "#30205f",
         wave: "#158ac7",
         katana: "#111b30",
-        slow: "#243c4d"
+        slow: "#243c4d",
+        unknown: "#839197"
     };
     const doorColor = doorColors[theme.type] || theme.base;
     const doorMark = {
@@ -223,7 +231,8 @@ function getTh2100Icon(vehicleId, theme, label, size) {
         eva: '<path d="M42 87l6-9 6 9-3-1-3 4-3-4z" fill="#171326" stroke="#f0aa31" stroke-width="1.2"/>',
         wave: '<text x="48" y="88" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">C</text>',
         katana: '<path d="M43 90l10-15" stroke="#f0f2f4" stroke-width="3"/><path d="M42 86l6 5" stroke="#d92332" stroke-width="2.2"/><text x="49" y="89" text-anchor="middle" font-size="4.4" font-weight="900" fill="#fff">刀</text>',
-        slow: '<text x="48" y="88" text-anchor="middle" font-size="4" font-weight="900" fill="#c8b27a">THR</text>'
+        slow: '<text x="48" y="88" text-anchor="middle" font-size="4" font-weight="900" fill="#c8b27a">THR</text>',
+        unknown: '<text x="48" y="89" text-anchor="middle" font-size="8" font-weight="900" fill="#edf4f5">?</text>'
     }[theme.type] || "";
     return `
         <svg class="tenhama-vehicle-icon ${escapeHtml(size)}" viewBox="0 0 96 108" role="img" aria-label="${escapeHtml(label)}の車両アイコン">
@@ -326,8 +335,8 @@ function getThg101Icon(label, size) {
 export function getTenhamaVehicleIcon(vehicleId, size = "card") {
     const label = vehicleId || "天浜線車両";
     if (vehicleId === "THG101") return getThg101Icon(label, size);
-    const theme = VEHICLE_ICON_THEMES[vehicleId] || VEHICLE_ICON_THEMES.TH2114;
-    return getTh2100Icon(vehicleId || "TH2114", theme, label, size);
+    const theme = VEHICLE_ICON_THEMES[vehicleId] || VEHICLE_ICON_THEMES.UNKNOWN;
+    return getTh2100Icon(vehicleId || "車両未確認", theme, label, size);
 }
 
 export function getTenhamaFleetGroups() {
@@ -455,8 +464,11 @@ export function getActiveTenhamaTrains(date = new Date()) {
             continue;
         }
 
-        const vehicleId = vehicleAssignments[trainNumber] || "";
-        const vehicleName = TENHAMA_VEHICLES[vehicleId] || "車両未掲載";
+        const assignment = vehicleAssignments[trainNumber] || "";
+        const vehicleIds = (Array.isArray(assignment) ? assignment : [assignment]).filter(Boolean);
+        const vehicleId = vehicleIds.join(" + ");
+        const vehicleNames = vehicleIds.map(id => TENHAMA_VEHICLES[id] || id);
+        const vehicleName = vehicleNames.join("＋") || "車両未掲載";
         const trip = {
             trainNumber,
             direction: rawTrip.d,
@@ -466,9 +478,10 @@ export function getActiveTenhamaTrains(date = new Date()) {
             departureMinute: first.minute,
             arrivalMinute: last.minute,
             vehicleId,
+            vehicleIds,
             vehicleName,
             shortVehicleName: getShortVehicleName(vehicleName),
-            featured: isFeaturedVehicle(vehicleId, vehicleName),
+            featured: vehicleIds.some(id => isFeaturedVehicle(id, TENHAMA_VEHICLES[id])),
             dateKey: jst.dateKey
         };
 
@@ -528,7 +541,7 @@ function openTenhamaDetail(train) {
 
     content.innerHTML = `
         <div class="tenhama-detail-title">
-            ${getTenhamaVehicleIcon(train.vehicleId, "detail")}
+            ${getTenhamaVehicleIcon(train.vehicleIds?.[0] || train.vehicleId, "detail")}
             <h2>${escapeHtml(train.trainNumber)}列車</h2>
         </div>
 
@@ -587,10 +600,10 @@ function createTrainCard(train) {
 
     element.innerHTML = `
         ${train.featured ? '<div class="tenhama-special-badge">特別車両</div>' : ""}
-        ${getTenhamaVehicleIcon(train.vehicleId)}
+        ${getTenhamaVehicleIcon(train.vehicleIds?.[0] || train.vehicleId)}
         <div class="train-kind">時刻表推定</div>
         <div class="train-number">${escapeHtml(train.trainNumber)}</div>
-        <div class="train-cars">1両</div>
+        <div class="train-cars">${train.vehicleIds?.length || 1}両</div>
         <div class="train-formation">${escapeHtml(train.vehicleId || "車両未掲載")}</div>
         <div class="tenhama-vehicle-name">${escapeHtml(train.shortVehicleName)}</div>
     `;

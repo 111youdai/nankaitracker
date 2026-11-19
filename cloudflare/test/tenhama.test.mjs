@@ -28,6 +28,14 @@ test("公式予定から503列車の特別車両を照合する", () => {
     assert.equal(train.destination.name_ja, "新所原");
 });
 
+test("11月後半も公式運用表から塗装を照合する", () => {
+    const at = new Date("2026-11-19T00:00:00.000Z");
+    const active = getActiveTenhamaTrains(at);
+    assert.ok(active.length > 0);
+    assert.ok(active.some(train => train.vehicleId && train.vehicleId !== "TH2114"));
+    assert.ok(active.every(train => train.vehicleId), "運行中の列車に車両番号が割り当てられる");
+});
+
 test("深夜帯は在線列車を表示しない", () => {
     const at = new Date("2026-11-02T17:00:00.000Z");
     assert.equal(getActiveTenhamaTrains(at).length, 0);
@@ -51,6 +59,8 @@ test("全車両に判別用の正面アイコンを生成する", () => {
     assert.match(getTenhamaVehicleIcon("THG101"), /viewBox="0 0 100 112"/);
     assert.match(getTenhamaVehicleIcon("THG101"), />THG101<\/text>/);
     assert.doesNotMatch(getTenhamaVehicleIcon("THG101"), /c18 8 23-3/);
+    assert.match(getTenhamaVehicleIcon(""), /車両未確認/);
+    assert.doesNotMatch(getTenhamaVehicleIcon(""), /TH2114/);
 });
 
 test("天浜線の編成表を3形式15両で構成する", () => {
