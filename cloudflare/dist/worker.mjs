@@ -1180,7 +1180,7 @@ function parseAtisText(text) {
     /\b(?:ARRIVAL|LANDING|LDG)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
   ]);
   const departureRunways = runwayList(clean, [
-    /\b(?:DEPARTURE|TAKEOFF|TAKE-OFF|TKOF)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+    /\b(?:DEPARTURE|DEP|TAKEOFF|TAKE-OFF|TKOF)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
   ]);
   const runways = runwayList(clean, [
     /\b(?:RUNWAYS?|RWYS?)\s+IN\s+USE\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i

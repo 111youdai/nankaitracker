@@ -30,6 +30,8 @@ test('ATIS本文から明示された情報だけを抽出する',()=>{
  const parsed=parseAtisText('INFORMATION DELTA 0915Z ARRIVAL RWY 34L DEPARTURE RWY 34R');
  assert.equal(parsed.information,'DELTA');assert.equal(parsed.issueTime,'0915');
  assert.deepEqual(parsed.arrivalRunways,['34L']);assert.deepEqual(parsed.departureRunways,['34R']);
+ const abbreviated=parseAtisText('ATIS RJBB X M0830 (APCH)ILS Z RWY24L LDG RWY 24L DEP RWY 24R');
+ assert.deepEqual(abbreviated.arrivalRunways,['24L']);assert.deepEqual(abbreviated.departureRunways,['24R']);
  const unknown=parseAtisText('INFORMATION ECHO 0920Z WIND 250 DEGREES 12 KNOTS');
  assert.deepEqual(unknown.runways,[]);assert.deepEqual(unknown.arrivalRunways,[]);assert.deepEqual(unknown.departureRunways,[]);
  assert.deepEqual(requestedAirports('RJBB,RJTT'),['RJBB','RJTT']);assert.equal(requestedAirports('XXXX'),null);

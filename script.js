@@ -540,12 +540,8 @@ function aviationElement(tag, className, text) {
     return element;
 }
 
-function runwayText(item) {
-    const parts = [];
-    if (item.departureRunways?.length) parts.push(`離陸 ${item.departureRunways.join("・")}`);
-    if (item.arrivalRunways?.length) parts.push(`着陸 ${item.arrivalRunways.join("・")}`);
-    if (!parts.length && item.runways?.length) parts.push(`使用 ${item.runways.join("・")}`);
-    return parts.join(" ／ ") || "本文から確認できず";
+function runwayValue(runways) {
+    return runways?.length ? runways.join("・") : "本文から確認できず";
 }
 
 function renderAtisCard(item) {
@@ -564,10 +560,15 @@ function renderAtisCard(item) {
         return card;
     }
     const facts = aviationElement("dl", "atis-facts");
-    for (const [label, value] of [
+    const factsRows = [
         ["発表時刻", item.issueTime ? `${item.issueTime}Z` : "本文から確認できず"],
-        ["滑走路", runwayText(item)]
-    ]) {
+        ["着陸", runwayValue(item.arrivalRunways)],
+        ["離陸", runwayValue(item.departureRunways)]
+    ];
+    if (!item.arrivalRunways?.length && !item.departureRunways?.length && item.runways?.length) {
+        factsRows.push(["使用滑走路", runwayValue(item.runways)]);
+    }
+    for (const [label, value] of factsRows) {
         facts.append(aviationElement("dt", "", label), aviationElement("dd", "", value));
     }
     const detail = aviationElement("details", "atis-full");
