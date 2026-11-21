@@ -1123,9 +1123,28 @@ var CACHE_TTL_MS = 6e4;
 var TIMEOUT_MS = 15e3;
 var SWIM_AIRPORTS = Object.freeze({
   RJBB: { name: "\u95A2\u897F\u56FD\u969B\u7A7A\u6E2F", short: "KIX" },
+  RJBE: { name: "\u795E\u6238\u7A7A\u6E2F", short: "UKB" },
   RJOO: { name: "\u5927\u962A\u56FD\u969B\u7A7A\u6E2F", short: "ITM" },
   RJAA: { name: "\u6210\u7530\u56FD\u969B\u7A7A\u6E2F", short: "NRT" },
-  RJTT: { name: "\u6771\u4EAC\u56FD\u969B\u7A7A\u6E2F", short: "HND" }
+  RJTT: { name: "\u6771\u4EAC\u56FD\u969B\u7A7A\u6E2F", short: "HND" },
+  RJCC: { name: "\u65B0\u5343\u6B73\u7A7A\u6E2F", short: "CTS" },
+  RJCH: { name: "\u51FD\u9928\u7A7A\u6E2F", short: "HKD" },
+  RJSS: { name: "\u4ED9\u53F0\u7A7A\u6E2F", short: "SDJ" },
+  RJSN: { name: "\u65B0\u6F5F\u7A7A\u6E2F", short: "KIJ" },
+  RJGG: { name: "\u4E2D\u90E8\u56FD\u969B\u7A7A\u6E2F", short: "NGO" },
+  RJOA: { name: "\u5E83\u5CF6\u7A7A\u6E2F", short: "HIJ" },
+  RJOT: { name: "\u9AD8\u677E\u7A7A\u6E2F", short: "TAK" },
+  RJOM: { name: "\u677E\u5C71\u7A7A\u6E2F", short: "MYJ" },
+  RJOK: { name: "\u9AD8\u77E5\u7A7A\u6E2F", short: "KCZ" },
+  RJFF: { name: "\u798F\u5CA1\u7A7A\u6E2F", short: "FUK" },
+  RJFS: { name: "\u4F50\u8CC0\u7A7A\u6E2F", short: "HSG" },
+  RJFU: { name: "\u9577\u5D0E\u7A7A\u6E2F", short: "NGS" },
+  RJFT: { name: "\u718A\u672C\u7A7A\u6E2F", short: "KMJ" },
+  RJFO: { name: "\u5927\u5206\u7A7A\u6E2F", short: "OIT" },
+  RJFM: { name: "\u5BAE\u5D0E\u7A7A\u6E2F", short: "KMI" },
+  RJFK: { name: "\u9E7F\u5150\u5CF6\u7A7A\u6E2F", short: "KOJ" },
+  ROAH: { name: "\u90A3\u8987\u7A7A\u6E2F", short: "OKA" },
+  ROIG: { name: "\u65B0\u77F3\u57A3\u7A7A\u6E2F", short: "ISG" }
 });
 var asText = (value) => typeof value === "string" ? value.trim() : "";
 var firstText = (object, keys) => keys.map((key) => asText(object?.[key])).find(Boolean) || null;
@@ -1172,26 +1191,53 @@ function runwayList(text, patterns) {
   }
   return [];
 }
+function frequencyList(text) {
+  const definitions = [
+    ["departure", "\u51FA\u767A\u7BA1\u5236", /\b(?:DEP|DEPARTURE)\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi],
+    ["approach", "\u9032\u5165\u7BA1\u5236", /\b(?:APP|APCH|APPROACH|ARR|ARRIVAL)\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi],
+    ["tower", "\u30BF\u30EF\u30FC", /\b(?:TWR|TOWER)\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi],
+    ["ground", "\u30B0\u30E9\u30F3\u30C9", /\b(?:GND|GROUND)\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi],
+    ["clearance", "\u30AF\u30EA\u30A2\u30E9\u30F3\u30B9", /\b(?:CLR|CLNC(?:\s+DEL)?|CLEARANCE(?:\s+DELIVERY)?|DELIVERY|CD)\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi],
+    ["atis", "ATIS", /\bATIS\s+FREQ(?:UENCY)?\s*[:\-]?\s*(\d{3}(?:\.\d{1,3})?)\b/gi]
+  ];
+  const frequencies = [];
+  for (const [type, label, pattern] of definitions) {
+    for (const match of text.matchAll(pattern)) {
+      const frequency = match[1];
+      if (!frequencies.some((item) => item.type === type && item.frequency === frequency)) frequencies.push({ type, label, frequency });
+    }
+  }
+  return frequencies;
+}
+function weatherData(text) {
+  const windRaw = text.match(/\b((?:VRB|\d{3})\d{2,3}(?:G\d{2,3}(?:\/\d{2,3})?)?KT|CALM)\b/i)?.[1]?.toUpperCase() || null;
+  const visibilityRaw = text.match(/\b(\d{1,3})KM\b/i)?.[0]?.toUpperCase() || null;
+  const qnh = text.match(/\bQ(\d{4})\b/i)?.[1] || null;
+  const altimeter = text.match(/\bA(\d{4})\b/i)?.[1] || null;
+  return { windRaw, visibilityRaw, qnh, altimeter };
+}
 function parseAtisText(text) {
   const clean = String(text || "").replace(/\r\n?/g, "\n").trim();
-  const information = clean.match(/\b(?:INFORMATION|INFO)\s+([A-Z]+)\b/i)?.[1]?.toUpperCase() || null;
-  const issueTime = clean.match(/\b(\d{4})Z\b/i)?.[1] || null;
+  const information = (clean.match(/\b(?:INFORMATION|INFO)\s+([A-Z]+)\b/i)?.[1] || clean.match(/\bATIS\s+[A-Z]{4}\s+([A-Z])\b/i)?.[1])?.toUpperCase() || null;
+  const issueTime = clean.match(/\bM(\d{4})\b/i)?.[1] || clean.match(/\b(\d{4})Z\b/i)?.[1] || null;
   const arrivalRunways = runwayList(clean, [
-    /\b(?:ARRIVAL|LANDING|LDG)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+    /\b(?:ARRIVAL|LANDING|LDG)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&)\s*\d{2}[LCR]?)*)/i
   ]);
   const departureRunways = runwayList(clean, [
-    /\b(?:DEPARTURE|DEP|TAKEOFF|TAKE-OFF|TKOF)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+    /\b(?:DEPARTURE|DEP|TAKEOFF|TAKE-OFF|TKOF)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&)\s*\d{2}[LCR]?)*)/i
   ]);
   const runways = runwayList(clean, [
-    /\b(?:RUNWAYS?|RWYS?)\s+IN\s+USE\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+    /\b(?:RUNWAYS?|RWYS?)\s+IN\s+USE\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&)\s*\d{2}[LCR]?)*)/i,
+    /\bUSING\s+(?:RUNWAYS?|RWYS?)\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&)\s*\d{2}[LCR]?)*)/i
   ]);
-  return { information, issueTime, arrivalRunways, departureRunways, runways, text: clean };
+  const frequencies = frequencyList(clean);
+  return { information, issueTime, arrivalRunways, departureRunways, runways, frequencies, ...weatherData(clean), text: clean };
 }
 function normalize(payload, requested, fetchedAt) {
   const records = rawEntries(payload), items = [];
   for (const code of requested) {
     const record = [...records].reverse().find((entry) => entry.location === code) || null;
-    items.push({ airport: code, ...SWIM_AIRPORTS[code], available: !!record, ...record ? parseAtisText(record.text) : { information: null, issueTime: null, arrivalRunways: [], departureRunways: [], runways: [], text: null } });
+    items.push({ airport: code, ...SWIM_AIRPORTS[code], available: !!record, ...record ? parseAtisText(record.text) : { information: null, issueTime: null, arrivalRunways: [], departureRunways: [], runways: [], frequencies: [], windRaw: null, visibilityRaw: null, qnh: null, altimeter: null, text: null } });
   }
   return { fetchedAt, source: "SWIM portal", service: "S2005", apiId: "FLV402001", items };
 }

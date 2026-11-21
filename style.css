@@ -312,6 +312,33 @@ a { color: inherit; text-decoration: none; }
 .aviation-actions button:disabled { cursor: wait; opacity: .55; }
 .aviation-actions small { color: var(--muted); }
 .airport-atis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.aviation-airport-picker {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.4fr) auto;
+    align-items: center;
+    gap: 14px;
+    margin-top: 22px;
+    padding: 18px;
+    border: 1px solid #31505b;
+    border-radius: 18px;
+    background: #0b2730;
+}
+.aviation-airport-picker label { display: grid; gap: 4px; }
+.aviation-airport-picker label small,
+.aviation-airport-picker > span { color: var(--muted); font-size: 12px; }
+.aviation-airport-picker select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 42px 0 14px;
+    border: 1px solid #3f6672;
+    border-radius: 12px;
+    appearance: none;
+    background: #071b24 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath d='m1 1 6 6 6-6' fill='none' stroke='%23ffd77f' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center;
+    color: var(--text);
+    font: inherit;
+}
+.aviation-airport-picker select:disabled { opacity: .55; cursor: wait; }
+.selected-airport-atis { max-width: calc(50% - 7px); margin-top: 14px; grid-template-columns: 1fr; }
 .atis-card {
     min-width: 0;
     padding: 18px;
@@ -1054,6 +1081,8 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .aviation-notice p { font-size: 12px; }
     .aviation-actions { align-items: flex-start; flex-direction: column; gap: 8px; }
     .airport-atis-grid { grid-template-columns: 1fr; gap: 10px; }
+    .aviation-airport-picker { grid-template-columns: 1fr; gap: 9px; padding: 15px; }
+    .selected-airport-atis { max-width: none; }
     .atis-card { padding: 15px; }
     .airport-preview-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .airport-preview-grid article { min-height: 110px; padding: 14px; }

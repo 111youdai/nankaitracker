@@ -30,11 +30,22 @@ test('ATIS本文から明示された情報だけを抽出する',()=>{
  const parsed=parseAtisText('INFORMATION DELTA 0915Z ARRIVAL RWY 34L DEPARTURE RWY 34R');
  assert.equal(parsed.information,'DELTA');assert.equal(parsed.issueTime,'0915');
  assert.deepEqual(parsed.arrivalRunways,['34L']);assert.deepEqual(parsed.departureRunways,['34R']);
- const abbreviated=parseAtisText('ATIS RJBB X M0830 (APCH)ILS Z RWY24L LDG RWY 24L DEP RWY 24R');
+ const abbreviated=parseAtisText('ATIS RJBB X M0830 (APCH)ILS Z RWY24L LDG RWY 24L DEP RWY 24R 30017KT 50KM Q1021/A3017');
+ assert.equal(abbreviated.information,'X');assert.equal(abbreviated.issueTime,'0830');
  assert.deepEqual(abbreviated.arrivalRunways,['24L']);assert.deepEqual(abbreviated.departureRunways,['24R']);
+ assert.equal(abbreviated.windRaw,'30017KT');assert.equal(abbreviated.visibilityRaw,'50KM');
+ assert.equal(abbreviated.qnh,'1021');assert.equal(abbreviated.altimeter,'3017');
+ const itami=parseAtisText('ATIS RJOO I M0600 (APCH)RNP RWY32L USING RWY 32L/32R KANSAI DEP FREQ 119.5, OSAKA TWR FREQ 118.1');
+ assert.equal(itami.information,'I');assert.deepEqual(itami.runways,['32L','32R']);
+ assert.deepEqual(itami.frequencies,[
+  {type:'departure',label:'出発管制',frequency:'119.5'},
+  {type:'tower',label:'タワー',frequency:'118.1'}
+ ]);
+ assert.equal(itami.issueTime,'0600');
  const unknown=parseAtisText('INFORMATION ECHO 0920Z WIND 250 DEGREES 12 KNOTS');
  assert.deepEqual(unknown.runways,[]);assert.deepEqual(unknown.arrivalRunways,[]);assert.deepEqual(unknown.departureRunways,[]);
  assert.deepEqual(requestedAirports('RJBB,RJTT'),['RJBB','RJTT']);assert.equal(requestedAirports('XXXX'),null);
+ assert.deepEqual(requestedAirports('RJBE,RJCC,ROAH'),['RJBE','RJCC','ROAH']);
 });
 
 test('SWIM認証情報を返さず、60秒以内はAPIへ再接続しない',async()=>{

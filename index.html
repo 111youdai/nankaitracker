@@ -13,7 +13,7 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261121c">
+    <link rel="stylesheet" href="style.css?v=20261121e">
 </head>
 <body>
     <section id="authGate" class="auth-gate" aria-live="polite">
@@ -178,6 +178,17 @@
                 <small id="aviationUpdated">未取得</small>
             </div>
             <div id="airportAtisGrid" class="airport-atis-grid" aria-live="polite"></div>
+            <div class="aviation-airport-picker">
+                <label for="aviationAirportSelect">
+                    <strong>その他の空港</strong>
+                    <small>選択した空港だけ取得・表示します</small>
+                </label>
+                <select id="aviationAirportSelect">
+                    <option value="">空港を選択</option>
+                </select>
+                <span id="selectedAirportStatus" role="status"></span>
+            </div>
+            <div id="selectedAirportAtis" class="airport-atis-grid selected-airport-atis" aria-live="polite" hidden></div>
             <footer class="aviation-source">出典：SWIM portal ／ SWIMコンテンツを加工して作成</footer>
         </section>
     </main>
@@ -199,7 +210,7 @@
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
-            <section><b>Ver 1.8.1</b><p>SWIM ATISの着陸滑走路と離陸滑走路を分けて表示します。</p></section>
+            <section><b>Ver 1.8.3</b><p>ATIS発表時刻・風向風速・視程・気圧・周波数を追加。主要5空港に神戸を加え、全国18空港の選択表示に対応。</p></section>
             <section><b>Ver 1.7.2</b><p>ホーム画面にSWIM ATIS航空情報ページへの入口を追加。</p></section>
             <section><b>Ver 1.7.1</b><p>一般ユーザーを「列車位置のみ」と「ログ・編成状況まで閲覧可」に分け、管理者がユーザーごとに切り替えられるようにしました。</p></section>
             <section><b>Ver 1.7.0</b><p>サイト全体にアカウント制を導入。新規登録は管理者承認制とし、管理画面から承認・拒否・利用停止が可能になりました。</p></section>
@@ -237,6 +248,6 @@
     <script src="account.js?v=20261110b"></script>
     <script src="ui.js?v=20261116b"></script>
     <script src="traffic.js?v=20261113b"></script>
-    <script type="module" src="script.js?v=20261121c"></script>
+    <script type="module" src="script.js?v=20261121e"></script>
 </body>
 </html>
