@@ -524,6 +524,114 @@ function setFleetSource(source) {
     if (badge) badge.textContent = "✓ ログイン済み";
 }
 
+const AVIATION_AIRPORTS = [
+    { airport: "RJBB", short: "KIX", name: "関西国際空港" },
+    { airport: "RJOO", short: "ITM", name: "大阪国際空港" },
+    { airport: "RJAA", short: "NRT", name: "成田国際空港" },
+    { airport: "RJTT", short: "HND", name: "東京国際空港" }
+];
+let aviationLoading = false;
+let aviationLoaded = false;
+
+function aviationElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+}
+
+function runwayText(item) {
+    const parts = [];
+    if (item.departureRunways?.length) parts.push(`離陸 ${item.departureRunways.join("・")}`);
+    if (item.arrivalRunways?.length) parts.push(`着陸 ${item.arrivalRunways.join("・")}`);
+    if (!parts.length && item.runways?.length) parts.push(`使用 ${item.runways.join("・")}`);
+    return parts.join(" ／ ") || "本文から確認できず";
+}
+
+function renderAtisCard(item) {
+    const card = aviationElement("article", `atis-card${item.available ? "" : " unavailable"}`);
+    const head = aviationElement("header", "atis-card-head");
+    const airport = aviationElement("div");
+    airport.append(
+        aviationElement("span", "atis-short", item.short),
+        aviationElement("strong", "", item.airport),
+        aviationElement("small", "", item.name)
+    );
+    head.append(airport, aviationElement("b", "atis-information", item.information ? `INFO ${item.information}` : "情報なし"));
+    card.append(head);
+    if (!item.available) {
+        card.append(aviationElement("p", "atis-empty", "現在のATIS情報を取得できませんでした。"));
+        return card;
+    }
+    const facts = aviationElement("dl", "atis-facts");
+    for (const [label, value] of [
+        ["発表時刻", item.issueTime ? `${item.issueTime}Z` : "本文から確認できず"],
+        ["滑走路", runwayText(item)]
+    ]) {
+        facts.append(aviationElement("dt", "", label), aviationElement("dd", "", value));
+    }
+    const detail = aviationElement("details", "atis-full");
+    detail.append(aviationElement("summary", "", "ATIS全文を表示"), aviationElement("pre", "", item.text));
+    card.append(facts, detail);
+    return card;
+}
+
+function renderAviationPlaceholders(text) {
+    const grid = document.getElementById("airportAtisGrid");
+    if (!grid) return;
+    grid.replaceChildren(...AVIATION_AIRPORTS.map(item => {
+        const card = renderAtisCard({ ...item, available: false });
+        card.querySelector(".atis-empty").textContent = text;
+        return card;
+    }));
+}
+
+async function loadAviation(force = false) {
+    if (aviationLoading || (aviationLoaded && !force)) return;
+    const status = document.getElementById("aviationStatus");
+    const updated = document.getElementById("aviationUpdated");
+    const button = document.getElementById("refreshAviation");
+    const user = window.getTrackerAccountUser?.();
+    if (!user) return;
+    if (user.role !== "owner") {
+        status.textContent = "管理者限定";
+        updated.textContent = "利用条件確認中";
+        button.hidden = true;
+        renderAviationPlaceholders("現在は管理者本人だけ閲覧できます。");
+        return;
+    }
+    button.hidden = false;
+    aviationLoading = true;
+    button.disabled = true;
+    status.textContent = "取得中…";
+    renderAviationPlaceholders("SWIMから取得しています…");
+    try {
+        const response = await fetch(
+            `${window.TRACKER_LOG_WORKER_URL}/api/aviation/atis?airport=RJBB,RJOO,RJAA,RJTT`,
+            {
+                headers: { Authorization: `Bearer ${window.getTrackerAccountToken?.() || ""}` },
+                signal: AbortSignal.timeout(30000)
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        document.getElementById("airportAtisGrid")?.replaceChildren(...data.items.map(renderAtisCard));
+        const time = new Intl.DateTimeFormat("ja-JP", {
+            timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit"
+        }).format(new Date(data.fetchedAt));
+        status.textContent = data.cached ? "取得済み" : "最新取得";
+        updated.textContent = `${time}更新${data.cached ? "（短時間キャッシュ）" : ""}`;
+        aviationLoaded = true;
+    } catch (error) {
+        status.textContent = "取得できません";
+        updated.textContent = error.message;
+        renderAviationPlaceholders("現在情報を取得できません。古い情報は表示していません。");
+    } finally {
+        aviationLoading = false;
+        button.disabled = false;
+    }
+}
+
 function setAppView(view, updateHistory = true) {
     const requestedView =
         ["home", "route", "log", "fleet", "patterns", "aviation"].includes(view)
@@ -550,6 +658,10 @@ function setAppView(view, updateHistory = true) {
 
     if (normalizedView === "patterns") {
         renderSpecialPatterns(document.getElementById("specialPatternList"));
+    }
+
+    if (normalizedView === "aviation") {
+        void loadAviation();
     }
 
     if (recordsVisible) {
@@ -637,7 +749,10 @@ window.addEventListener("nankai-account-ready", () => {
     if (!window.canViewTrackerRecords?.() && ["log", "fleet", "patterns"].includes(location.hash.replace("#", ""))) {
         setAppView("home");
     }
+    if (location.hash === "#aviation") void loadAviation();
 });
+
+document.getElementById("refreshAviation")?.addEventListener("click", () => void loadAviation(true));
 
 document.querySelectorAll("[data-fleet-source]").forEach(button => {
     button.addEventListener("click", () => setFleetSource(button.dataset.fleetSource));

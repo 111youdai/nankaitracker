@@ -656,8 +656,8 @@ function liveFormationMap(table, operations, group) {
   return items;
 }
 async function refreshLiveFormations(db, now, request = hub) {
-  const day = import_core.default.serviceDate(now), cacheKey = `live-formations:${day}`, cached2 = await read(db, cacheKey);
-  if (cached2 && Number.isFinite(Date.parse(cached2.fetchedAt)) && now - Date.parse(cached2.fetchedAt) < 12e4) return cached2;
+  const day = import_core.default.serviceDate(now), cacheKey = `live-formations:${day}`, cached3 = await read(db, cacheKey);
+  if (cached3 && Number.isFinite(Date.parse(cached3.fetchedAt)) && now - Date.parse(cached3.fetchedAt) < 12e4) return cached3;
   const diagram = diagramForDay(day), groups = await Promise.all(["nankai", "koya"].map(async (group) => {
     const revisions = await request("diagram_revisions", { railroad_id: group });
     if (!Array.isArray(revisions)) throw Error(`${group}: \u30C0\u30A4\u30E4\u6539\u6B63\u4E00\u89A7\u304C\u4E0D\u6B63\u3067\u3059`);
@@ -1116,6 +1116,128 @@ function enrichedTimeline(event, rows, schedule, base) {
   return { ...base, available: points.length > 0, points, note: [base?.note, "\u516C\u5F0F\u4E88\u5B9A\u306F\u5357\u6D77\u30A2\u30D7\u30EA\u914D\u4FE1\u5024\u3001\u8ECA\u5EAB\u306E\u6642\u523B\u306F\u4F4D\u7F6E\u30FB\u65B9\u5411\u30FB\u8DDD\u96E2\u304B\u3089\u306E\u63A8\u5B9A\u3067\u3059\u3002"].filter(Boolean).join(" ") };
 }
 
+// swim-atis.mjs
+var LOGIN_URL = "https://top.swim.mlit.go.jp/swim/webapi/login";
+var ATIS_URL = "https://web.swim.mlit.go.jp/f2atrq/web/FLV402001";
+var CACHE_TTL_MS = 6e4;
+var TIMEOUT_MS = 15e3;
+var SWIM_AIRPORTS = Object.freeze({
+  RJBB: { name: "\u95A2\u897F\u56FD\u969B\u7A7A\u6E2F", short: "KIX" },
+  RJOO: { name: "\u5927\u962A\u56FD\u969B\u7A7A\u6E2F", short: "ITM" },
+  RJAA: { name: "\u6210\u7530\u56FD\u969B\u7A7A\u6E2F", short: "NRT" },
+  RJTT: { name: "\u6771\u4EAC\u56FD\u969B\u7A7A\u6E2F", short: "HND" }
+});
+var asText = (value) => typeof value === "string" ? value.trim() : "";
+var firstText = (object, keys) => keys.map((key) => asText(object?.[key])).find(Boolean) || null;
+function cookieHeader(headers) {
+  const values = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [headers.get("set-cookie") || ""];
+  const cookies = [];
+  for (const value of values) {
+    for (const match of String(value).matchAll(/(?:^|,\s*)(MSM(?:SI|AI))=([^;,\s]+)/g)) cookies.push(`${match[1]}=${match[2]}`);
+  }
+  return [...new Set(cookies)].join("; ");
+}
+function atisError(payload) {
+  const info = payload?.error_info || payload?.errorInfo || {};
+  const code = Number(info.error_code ?? info.errorCode ?? 0);
+  if (code === 0) return null;
+  return firstText(info, ["error_message", "message", "detail"]) || `SWIM API\u30A8\u30E9\u30FC\uFF08${code}\uFF09`;
+}
+function textFrom(value) {
+  if (typeof value === "string") return value.trim();
+  if (!value || typeof value !== "object") return "";
+  return firstText(value, ["atis_text", "atisText", "text", "message", "contents", "content", "atis"]) || "";
+}
+function rawEntries(payload) {
+  const data = Array.isArray(payload?.data) ? payload.data : payload?.data ? [payload.data] : [], entries = [];
+  for (const group of data) {
+    const location = asText(group?.location || group?.airport || group?.icao).toUpperCase();
+    const source = group?.atisinfo ?? group?.atis_info ?? group?.atisInfo ?? group;
+    for (const item of Array.isArray(source) ? source : [source]) {
+      const text = textFrom(item) || textFrom(group) || (typeof item === "string" ? item.trim() : "");
+      if (text) entries.push({ location, text, raw: item });
+    }
+  }
+  return entries;
+}
+function runwayList(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const values = [...match[1].toUpperCase().matchAll(/\b\d{2}[LCR]?\b/g)].map((item) => item[0]);
+    if (values.length) return [...new Set(values)];
+  }
+  return [];
+}
+function parseAtisText(text) {
+  const clean = String(text || "").replace(/\r\n?/g, "\n").trim();
+  const information = clean.match(/\b(?:INFORMATION|INFO)\s+([A-Z]+)\b/i)?.[1]?.toUpperCase() || null;
+  const issueTime = clean.match(/\b(\d{4})Z\b/i)?.[1] || null;
+  const arrivalRunways = runwayList(clean, [
+    /\b(?:ARRIVAL|LANDING|LDG)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+  ]);
+  const departureRunways = runwayList(clean, [
+    /\b(?:DEPARTURE|TAKEOFF|TAKE-OFF|TKOF)\s+(?:RUNWAYS?|RWYS?)(?:\s+IN\s+USE)?\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+  ]);
+  const runways = runwayList(clean, [
+    /\b(?:RUNWAYS?|RWYS?)\s+IN\s+USE\s*[:\-]?\s*((?:\d{2}[LCR]?)(?:\s*(?:,|\/|AND|&|\s)\s*\d{2}[LCR]?)*)/i
+  ]);
+  return { information, issueTime, arrivalRunways, departureRunways, runways, text: clean };
+}
+function normalize(payload, requested, fetchedAt) {
+  const records = rawEntries(payload), items = [];
+  for (const code of requested) {
+    const record = [...records].reverse().find((entry) => entry.location === code) || null;
+    items.push({ airport: code, ...SWIM_AIRPORTS[code], available: !!record, ...record ? parseAtisText(record.text) : { information: null, issueTime: null, arrivalRunways: [], departureRunways: [], runways: [], text: null } });
+  }
+  return { fetchedAt, source: "SWIM portal", service: "S2005", apiId: "FLV402001", items };
+}
+async function cached2(db, key) {
+  const row = await db.prepare("SELECT value FROM meta WHERE key=?").bind(key).first();
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value);
+  } catch {
+    return null;
+  }
+}
+async function save(db, key, value) {
+  await db.prepare("INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(key, JSON.stringify(value)).run();
+}
+function requestedAirports(value) {
+  const requested = [...new Set(String(value || "").toUpperCase().split(",").map((item) => item.trim()).filter(Boolean))];
+  if (!requested.length || requested.length > 4 || requested.some((code) => !SWIM_AIRPORTS[code])) return null;
+  return requested;
+}
+async function fetchAtis(db, env, requested, { request = fetch, now = /* @__PURE__ */ new Date() } = {}) {
+  if (!env.SWIM_ID || !env.SWIM_PASSWORD) throw Object.assign(new Error("SWIM\u63A5\u7D9A\u60C5\u5831\u304C\u672A\u8A2D\u5B9A\u3067\u3059"), { code: "SWIM_NOT_CONFIGURED", status: 503 });
+  const key = `swim-atis:${[...requested].sort().join(",")}`, snapshot = await cached2(db, key), age = snapshot ? +now - Date.parse(snapshot.fetchedAt) : Infinity;
+  if (snapshot && Number.isFinite(age) && age >= 0 && age < CACHE_TTL_MS) return { ...snapshot, cached: true };
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const login2 = await request(LOGIN_URL, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify({ id: env.SWIM_ID, password: env.SWIM_PASSWORD }), redirect: "manual", signal: controller.signal });
+    if (!login2.ok) throw new Error(`SWIM\u8A8D\u8A3C\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08HTTP ${login2.status}\uFF09`);
+    const cookie = cookieHeader(login2.headers);
+    if (!cookie.includes("MSMSI=") || !cookie.includes("MSMAI=")) throw new Error("SWIM\u8A8D\u8A3C\u30BB\u30C3\u30B7\u30E7\u30F3\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F");
+    const url = new URL(ATIS_URL);
+    url.searchParams.set("location", requested.join(","));
+    url.searchParams.set("dispcnt", "10");
+    const response = await request(url, { headers: { Accept: "application/json", Cookie: cookie }, signal: controller.signal });
+    if (!response.ok) throw new Error(`ATIS\u60C5\u5831\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\uFF08HTTP ${response.status}\uFF09`);
+    const payload = await response.json();
+    const apiError = atisError(payload);
+    if (apiError) throw new Error(apiError);
+    const result = normalize(payload, requested, now.toISOString());
+    await save(db, key, result);
+    return { ...result, cached: false };
+  } catch (error) {
+    if (error?.name === "AbortError") throw Object.assign(new Error("SWIM\u3068\u306E\u901A\u4FE1\u304C\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u3057\u307E\u3057\u305F"), { status: 504 });
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // worker.mjs
 var { specialService } = import_core3.default;
 var { trajectoryPositions, buildTimeline } = import_stations2.default;
@@ -1195,6 +1317,20 @@ async function handle(request, env) {
     }
     const accountResponse = await handleAccountRequest(request, env);
     if (accountResponse) return accountResponse;
+    if (p === "/api/aviation/atis") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+      if (request.method !== "GET") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
+      const user = await authenticateAccount(request, env);
+      if (!user) return accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
+      if (user.role !== "owner") return accountJson(request, { error: "\u822A\u7A7A\u60C5\u5831\u306F\u73FE\u5728\u3001\u7BA1\u7406\u8005\u672C\u4EBA\u3060\u3051\u5229\u7528\u3067\u304D\u307E\u3059" }, 403);
+      const airports = requestedAirports(u.searchParams.get("airport"));
+      if (!airports) return accountJson(request, { error: "\u7A7A\u6E2F\u30B3\u30FC\u30C9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044" }, 400);
+      try {
+        return accountJson(request, await fetchAtis(db, env, airports));
+      } catch (error) {
+        return accountJson(request, { error: error.message || "ATIS\u60C5\u5831\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093", code: error.code || "SWIM_FETCH_FAILED" }, error.status || 503);
+      }
+    }
     if (p === "/api/patterns" || p.startsWith("/api/patterns/")) {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
       const user = await authenticateAccount(request, env);

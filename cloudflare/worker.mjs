@@ -5,6 +5,7 @@ import stations from './stations.cjs';
 import fleet from './fleet.cjs';
 import {trafficInfo} from './traffic.mjs';
 import {captureSchedules,enrichedTimeline,inferredDepot,schedulePoints} from './record-schedules.mjs';
+import {fetchAtis,requestedAirports} from './swim-atis.mjs';
 const {specialService}=core;
 const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
@@ -69,6 +70,17 @@ export async function handle(request,env){
   }
   const accountResponse=await handleAccountRequest(request,env);
   if(accountResponse)return accountResponse;
+  if(p==='/api/aviation/atis'){
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders(request)});
+   if(request.method!=='GET')return accountJson(request,{error:'許可されていない操作です'},405);
+   const user=await authenticateAccount(request,env);
+   if(!user)return accountJson(request,{error:'ログインが必要です'},401);
+   if(user.role!=='owner')return accountJson(request,{error:'航空情報は現在、管理者本人だけ利用できます'},403);
+   const airports=requestedAirports(u.searchParams.get('airport'));
+   if(!airports)return accountJson(request,{error:'空港コードを確認してください'},400);
+   try{return accountJson(request,await fetchAtis(db,env,airports));}
+   catch(error){return accountJson(request,{error:error.message||'ATIS情報を取得できません',code:error.code||'SWIM_FETCH_FAILED'},error.status||503);}
+  }
   if(p==='/api/patterns'||p.startsWith('/api/patterns/')){
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders(request)});
    const user=await authenticateAccount(request,env);

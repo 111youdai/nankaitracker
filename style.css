@@ -297,6 +297,43 @@ a { color: inherit; text-decoration: none; }
 }
 .aviation-notice strong { color: #ffe0a0; }
 .aviation-notice p { margin: 8px 0 0; color: var(--muted); line-height: 1.7; }
+.aviation-actions { display: flex; align-items: center; gap: 14px; margin: 18px 0; }
+.aviation-actions button {
+    min-height: 42px;
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 203, 94, .45);
+    border-radius: 12px;
+    background: #765019;
+    color: #fff3cf;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+.aviation-actions button:disabled { cursor: wait; opacity: .55; }
+.aviation-actions small { color: var(--muted); }
+.airport-atis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.atis-card {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid #31505b;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #123642, #0b252f);
+}
+.atis-card.unavailable { opacity: .72; }
+.atis-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.atis-card-head > div { display: grid; }
+.atis-card-head strong { margin-top: 3px; font-size: 24px; }
+.atis-card-head small { color: var(--muted); }
+.atis-short { color: #ffd77f; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+.atis-information { flex: 0 0 auto; padding: 7px 9px; border-radius: 9px; background: #765019; color: #ffe3a4; font-size: 11px; }
+.atis-facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; margin: 18px 0; padding-top: 15px; border-top: 1px solid var(--line); }
+.atis-facts dt { color: var(--muted); font-size: 11px; }
+.atis-facts dd { min-width: 0; margin: 0; font-weight: 750; overflow-wrap: anywhere; }
+.atis-empty { min-height: 48px; margin: 18px 0 0; color: var(--muted); line-height: 1.6; }
+.atis-full { border-top: 1px solid var(--line); padding-top: 13px; }
+.atis-full summary { color: #ffd77f; cursor: pointer; font-weight: 750; }
+.atis-full pre { max-height: 280px; overflow: auto; margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #c8dbe0; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.aviation-source { margin-top: 18px; color: var(--muted); font-size: 11px; }
 .airport-preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .airport-preview-grid article {
     min-height: 130px;
@@ -1015,6 +1052,9 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .aviation-status { display: inline-block; margin-top: 14px; }
     .aviation-notice { margin-top: 18px; padding: 16px; }
     .aviation-notice p { font-size: 12px; }
+    .aviation-actions { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .airport-atis-grid { grid-template-columns: 1fr; gap: 10px; }
+    .atis-card { padding: 15px; }
     .airport-preview-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .airport-preview-grid article { min-height: 110px; padding: 14px; }
     .patterns-heading h2 { font-size: 28px; }
