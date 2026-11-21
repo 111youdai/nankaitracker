@@ -526,7 +526,7 @@ function setFleetSource(source) {
 
 function setAppView(view, updateHistory = true) {
     const requestedView =
-        ["home", "route", "log", "fleet", "patterns"].includes(view)
+        ["home", "route", "log", "fleet", "patterns", "aviation"].includes(view)
             ? view
             : "home";
     const protectedView = ["log", "fleet", "patterns"].includes(requestedView);
@@ -537,6 +537,7 @@ function setAppView(view, updateHistory = true) {
     const route = document.getElementById("routeWorkspace");
     const records = document.getElementById("recordsWorkspace");
     const patterns = document.getElementById("patternsWorkspace");
+    const aviation = document.getElementById("aviationWorkspace");
     const recordsVisible =
         normalizedView === "log" ||
         normalizedView === "fleet";
@@ -545,6 +546,7 @@ function setAppView(view, updateHistory = true) {
     if (route) route.hidden = normalizedView !== "route";
     if (records) records.hidden = !recordsVisible;
     if (patterns) patterns.hidden = normalizedView !== "patterns";
+    if (aviation) aviation.hidden = normalizedView !== "aviation";
 
     if (normalizedView === "patterns") {
         renderSpecialPatterns(document.getElementById("specialPatternList"));
@@ -702,7 +704,7 @@ if (versionModal) {
 
 const initialHash = location.hash.replace("#", "");
 setAppView(
-    ["route", "log", "fleet", "patterns"].includes(initialHash) || LINE_MODES.has(initialHash)
+    ["route", "log", "fleet", "patterns", "aviation"].includes(initialHash) || LINE_MODES.has(initialHash)
         ? (LINE_MODES.has(initialHash) ? "route" : initialHash)
         : "home",
     false

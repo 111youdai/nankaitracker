@@ -13,7 +13,7 @@
     <title>南海トラッカー</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/app-icon.svg">
-    <link rel="stylesheet" href="style.css?v=20261113b">
+    <link rel="stylesheet" href="style.css?v=20261121a">
 </head>
 <body>
     <section id="authGate" class="auth-gate" aria-live="polite">
@@ -88,6 +88,10 @@
                         <span class="quick-symbol">筋</span>
                         <span><b>特別スジ</b><small>列番ごとの経路・通過時刻</small></span>
                     </button>
+                    <button class="quick-card aviation-card" type="button" data-app-view="aviation">
+                        <span class="quick-symbol">航</span>
+                        <span><b>航空情報</b><small>SWIM ATIS・滑走路運用</small></span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -155,6 +159,27 @@
             </div>
             <div id="specialPatternList" class="pattern-grid" aria-live="polite"></div>
         </section>
+
+        <section id="aviationWorkspace" class="aviation-workspace" hidden>
+            <div class="aviation-heading">
+                <div>
+                    <span class="eyebrow">AVIATION INFORMATION</span>
+                    <h2>航空情報</h2>
+                    <p>国土交通省SWIMのATIS情報を、安全なCloudflare経由で表示するための専用画面です。</p>
+                </div>
+                <span class="aviation-status">接続準備中</span>
+            </div>
+            <aside class="aviation-notice">
+                <strong>現在は画面入口のみ利用できます</strong>
+                <p>認証情報はブラウザや公開コードへ保存せず、公式仕様と利用条件を確認してからATIS取得を有効化します。</p>
+            </aside>
+            <div class="airport-preview-grid" aria-label="優先対応予定空港">
+                <article><span>KIX</span><strong>RJBB</strong><small>関西国際空港</small></article>
+                <article><span>ITM</span><strong>RJOO</strong><small>大阪国際空港</small></article>
+                <article><span>NRT</span><strong>RJAA</strong><small>成田国際空港</small></article>
+                <article><span>HND</span><strong>RJTT</strong><small>東京国際空港</small></article>
+            </div>
+        </section>
     </main>
 
     <button id="detailBackdrop" class="detail-backdrop" type="button" aria-label="列車詳細を閉じる"></button>
@@ -174,6 +199,7 @@
     <dialog id="versionModal">
         <div class="version-header"><div><span class="eyebrow">CHANGELOG</span><h2>更新履歴</h2></div><button id="closeModal" type="button" aria-label="閉じる">×</button></div>
         <div class="version-list">
+            <section><b>Ver 1.7.2</b><p>ホーム画面にSWIM ATIS航空情報ページへの入口を追加。</p></section>
             <section><b>Ver 1.7.1</b><p>一般ユーザーを「列車位置のみ」と「ログ・編成状況まで閲覧可」に分け、管理者がユーザーごとに切り替えられるようにしました。</p></section>
             <section><b>Ver 1.7.0</b><p>サイト全体にアカウント制を導入。新規登録は管理者承認制とし、管理画面から承認・拒否・利用停止が可能になりました。</p></section>
             <section><b>Ver 1.6.0</b><p>翌日以降の通常運用が確認された編成を編成状況から自動整理。既知の試運転・臨時回送・入場回送を列番、区間、時刻で確認できる「特別スジ一覧」を追加。</p></section>
@@ -210,6 +236,6 @@
     <script src="account.js?v=20261110b"></script>
     <script src="ui.js?v=20261116b"></script>
     <script src="traffic.js?v=20261113b"></script>
-    <script type="module" src="script.js?v=20261119a"></script>
+    <script type="module" src="script.js?v=20261121a"></script>
 </body>
 </html>

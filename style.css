@@ -246,6 +246,7 @@ a { color: inherit; text-decoration: none; }
 .quick-card.log-card { background: linear-gradient(145deg, #c34c23, #73291a); }
 .quick-card.fleet-card { background: linear-gradient(145deg, #247fa5, #134a64); }
 .quick-card.patterns-card { background: linear-gradient(145deg, #6d4aa0, #3d2d68); }
+.quick-card.aviation-card { background: linear-gradient(145deg, #d79a28, #79531a); }
 .quick-symbol {
     display: grid;
     place-items: center;
@@ -258,6 +259,58 @@ a { color: inherit; text-decoration: none; }
 .quick-card > span:last-child { display: flex; flex-direction: column; }
 .quick-card b { font-size: 16px; }
 .quick-card small { margin-top: 3px; color: rgba(255,255,255,.7); font-size: 10px; }
+
+.aviation-workspace {
+    min-height: 560px;
+    margin: 28px 0;
+    padding: clamp(22px, 4vw, 42px);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at 82% 4%, rgba(215, 154, 40, .15), transparent 32%),
+        var(--surface);
+}
+.aviation-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 28px;
+    align-items: flex-start;
+}
+.aviation-heading h2 { margin: 6px 0 10px; font-size: clamp(34px, 5vw, 56px); }
+.aviation-heading p { max-width: 650px; margin: 0; color: var(--muted); line-height: 1.7; }
+.aviation-status {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 203, 94, .45);
+    border-radius: 999px;
+    background: rgba(131, 89, 19, .35);
+    color: #ffd77f;
+    font-size: 12px;
+    font-weight: 800;
+}
+.aviation-notice {
+    margin: 28px 0 18px;
+    padding: 20px;
+    border-left: 4px solid #d79a28;
+    border-radius: 16px;
+    background: #0b2730;
+}
+.aviation-notice strong { color: #ffe0a0; }
+.aviation-notice p { margin: 8px 0 0; color: var(--muted); line-height: 1.7; }
+.airport-preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.airport-preview-grid article {
+    min-height: 130px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: linear-gradient(145deg, #123642, #0b252f);
+}
+.airport-preview-grid span { color: #ffd77f; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.airport-preview-grid strong { margin-top: 6px; font-size: 25px; }
+.airport-preview-grid small { margin-top: 3px; color: var(--muted); font-size: 12px; }
 
 .route-workspace {
     min-height: calc(100dvh - 104px);
@@ -950,10 +1003,20 @@ body.detail-open .detail-backdrop { opacity: 1; pointer-events: auto; }
     .quick-grid { grid-template-columns: repeat(2, 1fr); }
     .quick-card { min-height: 106px; padding: 14px; }
     .quick-card.route-card { grid-column: 1 / -1; min-height: 86px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 13px; }
-    .quick-card.patterns-card { grid-column: 1 / -1; min-height: 82px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 13px; }
+    .quick-card.patterns-card,
+    .quick-card.aviation-card { min-height: 96px; }
     .route-workspace { min-height: calc(100dvh - 154px); margin: 12px 0 16px; padding: 14px 10px 22px; border-radius: 20px; }
     .records-workspace { min-height: calc(100dvh - 150px); margin: 12px 0 8px; padding: 12px 8px 8px; border-radius: 20px; }
     .patterns-workspace { min-height: calc(100dvh - 150px); margin: 12px 0 8px; padding: 18px 12px 24px; border-radius: 20px; }
+    .aviation-workspace { min-height: calc(100dvh - 150px); margin: 12px 0 8px; padding: 20px 14px 24px; border-radius: 20px; }
+    .aviation-heading { display: block; }
+    .aviation-heading h2 { font-size: 34px; }
+    .aviation-heading p { font-size: 13px; }
+    .aviation-status { display: inline-block; margin-top: 14px; }
+    .aviation-notice { margin-top: 18px; padding: 16px; }
+    .aviation-notice p { font-size: 12px; }
+    .airport-preview-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .airport-preview-grid article { min-height: 110px; padding: 14px; }
     .patterns-heading h2 { font-size: 28px; }
     .patterns-heading p { font-size: 12px; }
     .pattern-grid { grid-template-columns: 1fr; }
