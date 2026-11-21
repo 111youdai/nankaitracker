@@ -11,6 +11,17 @@ const {trajectoryPositions,buildTimeline}=stations;
 const {mergeFleetStatus}=fleet;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const publicJson=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json;charset=UTF-8','Cache-Control':'public, max-age=60','Access-Control-Allow-Origin':'*','X-Content-Type-Options':'nosniff'}});
+const TEMP_AVIATION_ACCESS_UNTIL='2026-11-22T14:59:59.999Z';
+const normalizedEmail=value=>String(value||'').trim().toLowerCase();
+function aviationAccess(user,env){
+ if(user?.role==='owner')return {allowed:true,rawText:true,expiresAt:null};
+ const expiresAt=env.AVIATION_TEMP_ACCESS_UNTIL||TEMP_AVIATION_ACCESS_UNTIL,expiry=Date.parse(expiresAt);
+ const allowed=!!user&&user.status==='approved'&&normalizedEmail(user.email)===normalizedEmail(env.AVIATION_TEMP_USER_EMAIL)&&Number.isFinite(expiry)&&Date.now()<=expiry;
+ return {allowed,rawText:false,expiresAt:allowed?new Date(expiry).toISOString():null};
+}
+function extractedAtisOnly(result){
+ return {...result,items:(result.items||[]).map(({text,...item})=>item)};
+}
 const DEPOT_NAMES=Object.freeze({'羽倉崎':'羽倉崎検車区','住ノ江':'住ノ江検車区','千代田':'千代田工場','小原田':'小原田検車区'});
 function cleanPlace(position){
  let text=String(position?.text||position?.current||'確認できません').replace(/駅/g,'').replace(/（(?:停車中|走行中)）/g,'').replace(/\s+/g,' ').trim();
@@ -75,10 +86,14 @@ export async function handle(request,env){
    if(request.method!=='GET')return accountJson(request,{error:'許可されていない操作です'},405);
    const user=await authenticateAccount(request,env);
    if(!user)return accountJson(request,{error:'ログインが必要です'},401);
-   if(user.role!=='owner')return accountJson(request,{error:'航空情報は現在、管理者本人だけ利用できます'},403);
+   const access=aviationAccess(user,env);
+   if(!access.allowed)return accountJson(request,{error:'このアカウントは航空情報の利用対象ではありません'},403);
    const airports=requestedAirports(u.searchParams.get('airport'));
    if(!airports)return accountJson(request,{error:'空港コードを確認してください'},400);
-   try{return accountJson(request,await fetchAtis(db,env,airports));}
+   try{
+    const result=await fetchAtis(db,env,airports);
+    return accountJson(request,{...(access.rawText?result:extractedAtisOnly(result)),access:{rawText:access.rawText,expiresAt:access.expiresAt}});
+   }
    catch(error){return accountJson(request,{error:error.message||'ATIS情報を取得できません',code:error.code||'SWIM_FETCH_FAILED'},error.status||503);}
   }
   if(p==='/api/patterns'||p.startsWith('/api/patterns/')){

@@ -1293,6 +1293,17 @@ var { trajectoryPositions, buildTimeline } = import_stations2.default;
 var { mergeFleetStatus } = import_fleet2.default;
 var json = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json;charset=UTF-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 var publicJson = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json;charset=UTF-8", "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*", "X-Content-Type-Options": "nosniff" } });
+var TEMP_AVIATION_ACCESS_UNTIL = "2026-11-22T14:59:59.999Z";
+var normalizedEmail = (value) => String(value || "").trim().toLowerCase();
+function aviationAccess(user, env) {
+  if (user?.role === "owner") return { allowed: true, rawText: true, expiresAt: null };
+  const expiresAt = env.AVIATION_TEMP_ACCESS_UNTIL || TEMP_AVIATION_ACCESS_UNTIL, expiry = Date.parse(expiresAt);
+  const allowed = !!user && user.status === "approved" && normalizedEmail(user.email) === normalizedEmail(env.AVIATION_TEMP_USER_EMAIL) && Number.isFinite(expiry) && Date.now() <= expiry;
+  return { allowed, rawText: false, expiresAt: allowed ? new Date(expiry).toISOString() : null };
+}
+function extractedAtisOnly(result) {
+  return { ...result, items: (result.items || []).map(({ text, ...item }) => item) };
+}
 var DEPOT_NAMES = Object.freeze({ "\u7FBD\u5009\u5D0E": "\u7FBD\u5009\u5D0E\u691C\u8ECA\u533A", "\u4F4F\u30CE\u6C5F": "\u4F4F\u30CE\u6C5F\u691C\u8ECA\u533A", "\u5343\u4EE3\u7530": "\u5343\u4EE3\u7530\u5DE5\u5834", "\u5C0F\u539F\u7530": "\u5C0F\u539F\u7530\u691C\u8ECA\u533A" });
 function cleanPlace(position) {
   let text = String(position?.text || position?.current || "\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093").replace(/駅/g, "").replace(/（(?:停車中|走行中)）/g, "").replace(/\s+/g, " ").trim();
@@ -1371,11 +1382,13 @@ async function handle(request, env) {
       if (request.method !== "GET") return accountJson(request, { error: "\u8A31\u53EF\u3055\u308C\u3066\u3044\u306A\u3044\u64CD\u4F5C\u3067\u3059" }, 405);
       const user = await authenticateAccount(request, env);
       if (!user) return accountJson(request, { error: "\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059" }, 401);
-      if (user.role !== "owner") return accountJson(request, { error: "\u822A\u7A7A\u60C5\u5831\u306F\u73FE\u5728\u3001\u7BA1\u7406\u8005\u672C\u4EBA\u3060\u3051\u5229\u7528\u3067\u304D\u307E\u3059" }, 403);
+      const access = aviationAccess(user, env);
+      if (!access.allowed) return accountJson(request, { error: "\u3053\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u822A\u7A7A\u60C5\u5831\u306E\u5229\u7528\u5BFE\u8C61\u3067\u306F\u3042\u308A\u307E\u305B\u3093" }, 403);
       const airports = requestedAirports(u.searchParams.get("airport"));
       if (!airports) return accountJson(request, { error: "\u7A7A\u6E2F\u30B3\u30FC\u30C9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044" }, 400);
       try {
-        return accountJson(request, await fetchAtis(db, env, airports));
+        const result = await fetchAtis(db, env, airports);
+        return accountJson(request, { ...access.rawText ? result : extractedAtisOnly(result), access: { rawText: access.rawText, expiresAt: access.expiresAt } });
       } catch (error) {
         return accountJson(request, { error: error.message || "ATIS\u60C5\u5831\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093", code: error.code || "SWIM_FETCH_FAILED" }, error.status || 503);
       }

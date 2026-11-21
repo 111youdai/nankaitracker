@@ -631,9 +631,12 @@ function renderAtisCard(item) {
     for (const [label, value] of factsRows) {
         facts.append(aviationElement("dt", "", label), aviationElement("dd", "", value));
     }
-    const detail = aviationElement("details", "atis-full");
-    detail.append(aviationElement("summary", "", "ATIS全文を表示"), aviationElement("pre", "", item.text));
-    card.append(facts, detail);
+    card.append(facts);
+    if (item.text) {
+        const detail = aviationElement("details", "atis-full");
+        detail.append(aviationElement("summary", "", "ATIS全文を表示"), aviationElement("pre", "", item.text));
+        card.append(detail);
+    }
     return card;
 }
 
@@ -684,14 +687,6 @@ async function loadAviation(force = false) {
     const button = document.getElementById("refreshAviation");
     const user = window.getTrackerAccountUser?.();
     if (!user) return;
-    if (user.role !== "owner") {
-        status.textContent = "管理者限定";
-        updated.textContent = "利用条件確認中";
-        button.hidden = true;
-        document.getElementById("aviationAirportSelect").disabled = true;
-        renderAviationPlaceholders("現在は管理者本人だけ閲覧できます。");
-        return;
-    }
     button.hidden = false;
     document.getElementById("aviationAirportSelect").disabled = false;
     aviationLoading = true;
@@ -709,7 +704,8 @@ async function loadAviation(force = false) {
         const fetchedAt = batches.map(data => data.fetchedAt).sort().at(-1);
         const cached = batches.every(data => data.cached);
         status.textContent = cached ? "取得済み" : "最新取得";
-        updated.textContent = `${formatFetchedAt(fetchedAt)}更新${cached ? "（短時間キャッシュ）" : ""}`;
+        const expiresAt = batches.map(data => data.access?.expiresAt).find(Boolean);
+        updated.textContent = `${formatFetchedAt(fetchedAt)}更新${cached ? "（短時間キャッシュ）" : ""}${expiresAt ? "・一時利用は11月22日23:59まで" : ""}`;
         aviationLoaded = true;
     } catch (error) {
         status.textContent = "取得できません";
@@ -734,7 +730,7 @@ async function loadSelectedAirport(code) {
     }
     const airport = AVIATION_OTHER_AIRPORTS.find(item => item.airport === code);
     const user = window.getTrackerAccountUser?.();
-    if (!airport || user?.role !== "owner") return;
+    if (!airport || !user) return;
     selectedAirportLoading = true;
     select.disabled = true;
     grid.hidden = false;

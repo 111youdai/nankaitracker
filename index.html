@@ -170,8 +170,8 @@
                 <span id="aviationStatus" class="aviation-status">読み込み待ち</span>
             </div>
             <aside id="aviationNotice" class="aviation-notice">
-                <strong>管理者専用</strong>
-                <p>SWIMの利用条件を確認できるまで、ATIS情報は管理者本人にだけ表示します。認証情報はCloudflare内にのみ保存されます。</p>
+                <strong>限定表示</strong>
+                <p>管理者本人と指定した家族1名だけが利用できます。家族には抽出した最新情報のみを表示し、ATIS原文・履歴・SWIM認証情報は表示しません。一時利用は2026年11月22日23:59（日本時間）で自動終了します。</p>
             </aside>
             <div class="aviation-actions">
                 <button id="refreshAviation" type="button">ATISを更新</button>
@@ -189,7 +189,7 @@
                 <span id="selectedAirportStatus" role="status"></span>
             </div>
             <div id="selectedAirportAtis" class="airport-atis-grid selected-airport-atis" aria-live="polite" hidden></div>
-            <footer class="aviation-source">出典：SWIM portal ／ SWIMコンテンツを加工して作成</footer>
+            <footer class="aviation-source">出典：国土交通省 SWIM portal ／ SWIMコンテンツを加工して作成</footer>
         </section>
     </main>
 

@@ -77,20 +77,34 @@ test('SWIMのHTTP 200業務エラー配列を失敗として扱う',async()=>{
  }finally{db.raw.close();}
 });
 
-async function userToken(db,secret,role='owner'){
- const email=`${role}@example.com`,now='2026-11-21T00:00:00Z';
+async function userToken(db,secret,role='owner',email=`${role}@example.com`){
+ const now='2026-11-21T00:00:00Z';
  await db.prepare('INSERT INTO users(email,display_name,password_salt,password_hash,password_iterations,role,access_level,status,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(email,role,'AA','AA',1,role,role==='owner'?'records':'position','approved',now,now).run();
  const user=await db.prepare('SELECT * FROM users WHERE email=?').bind(email).first();
  return issueAccountToken(user,secret);
 }
 
-test('航空情報APIは管理者だけが利用でき、未設定時は503を返す',async()=>{
+test('航空情報APIは管理者と指定した家族1名だけが利用でき、家族には原文を返さない',async()=>{
  const db=database(),secret='account-secret-long-enough';try{
-  const owner=await userToken(db,secret,'owner'),member=await userToken(db,secret,'member'),url='https://example.com/api/aviation/atis?airport=RJBB';
-  const base={DB:db,ACCOUNT_SESSION_SECRET:secret};
+  const owner=await userToken(db,secret,'owner'),member=await userToken(db,secret,'member'),family=await userToken(db,secret,'member','family@example.com'),url='https://example.com/api/aviation/atis?airport=RJBB';
+  const base={DB:db,ACCOUNT_SESSION_SECRET:secret,AVIATION_TEMP_USER_EMAIL:'family@example.com',AVIATION_TEMP_ACCESS_UNTIL:'2099-11-22T14:59:59.999Z'};
   assert.equal((await handle(new Request(url),base)).status,401);
   assert.equal((await handle(new Request(url,{headers:{Authorization:`Bearer ${member}`}}),base)).status,403);
+  const familyResponse=await handle(new Request(url,{headers:{Authorization:`Bearer ${family}`}}),base),familyBody=await familyResponse.json();
+  assert.equal(familyResponse.status,503);
+  assert.equal(familyBody.code,'SWIM_NOT_CONFIGURED');
   const response=await handle(new Request(url,{headers:{Authorization:`Bearer ${owner}`}}),base),body=await response.json();
   assert.equal(response.status,503);assert.equal(body.code,'SWIM_NOT_CONFIGURED');
  }finally{db.raw.close();}
+});
+
+test('家族向け航空情報レスポンスからATIS原文を除去する',async()=>{
+ const db=database(),secret='account-secret-long-enough',originalFetch=globalThis.fetch;try{
+  const family=await userToken(db,secret,'member','family@example.com'),calls=[];
+  globalThis.fetch=swimRequest(calls);
+  const env={DB:db,ACCOUNT_SESSION_SECRET:secret,AVIATION_TEMP_USER_EMAIL:'family@example.com',AVIATION_TEMP_ACCESS_UNTIL:'2099-11-22T14:59:59.999Z',SWIM_ID:'id',SWIM_PASSWORD:'password'};
+  const response=await handle(new Request('https://example.com/api/aviation/atis?airport=RJBB',{headers:{Authorization:`Bearer ${family}`}}),env),body=await response.json();
+  assert.equal(response.status,200);assert.equal(body.items[0].airport,'RJBB');assert.equal('text' in body.items[0],false);
+  assert.equal(body.access.rawText,false);assert.equal(body.access.expiresAt,'2099-11-22T14:59:59.999Z');
+ }finally{globalThis.fetch=originalFetch;db.raw.close();}
 });
