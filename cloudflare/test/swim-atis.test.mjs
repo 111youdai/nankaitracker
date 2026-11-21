@@ -19,7 +19,7 @@ function swimRequest(calls,{fail=false}={}){
    return new Response('{}',{status:200,headers});
   }
   if(fail)return new Response('unavailable',{status:503});
-  return Response.json({error_info:{error_code:0},data:[
+  return Response.json({error_info:[{error_code:'0',error_description:'normal'}],data:[
    {location:'RJBB',atisinfo:['RJBB ATIS INFORMATION BRAVO 1230Z ARRIVAL RUNWAY 24L DEPARTURE RUNWAY 24R']},
    {location:'RJOO',atisinfo:['RJOO ATIS INFORMATION CHARLIE 1231Z WEATHER CALM']}
   ]});
@@ -51,6 +51,16 @@ test('期限切れキャッシュは取得失敗時に現在情報として返�
   const env={SWIM_ID:'id',SWIM_PASSWORD:'password'},calls=[];
   await fetchAtis(db,env,['RJBB'],{request:swimRequest(calls),now:new Date('2026-11-21T12:00:00Z')});
   await assert.rejects(fetchAtis(db,env,['RJBB'],{request:swimRequest(calls,{fail:true}),now:new Date('2026-11-21T12:02:00Z')}),/取得できません/);
+ }finally{db.raw.close();}
+});
+
+test('SWIMのHTTP 200業務エラー配列を失敗として扱う',async()=>{
+ const db=database();try{
+  const request=async(url)=>{
+   if(String(url).includes('/login')){const headers=new Headers({'Set-Cookie':'MSMSI=a; Path=/, MSMAI=b; Path=/'});return new Response('{}',{headers});}
+   return Response.json({error_info:[{error_code:'4',error_description:'location not found'}]});
+  };
+  await assert.rejects(fetchAtis(db,{SWIM_ID:'id',SWIM_PASSWORD:'password'},['RJBB'],{request}),/location not found/);
  }finally{db.raw.close();}
 });
 

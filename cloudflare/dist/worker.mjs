@@ -1138,10 +1138,13 @@ function cookieHeader(headers) {
   return [...new Set(cookies)].join("; ");
 }
 function atisError(payload) {
-  const info = payload?.error_info || payload?.errorInfo || {};
-  const code = Number(info.error_code ?? info.errorCode ?? 0);
-  if (code === 0) return null;
-  return firstText(info, ["error_message", "message", "detail"]) || `SWIM API\u30A8\u30E9\u30FC\uFF08${code}\uFF09`;
+  const source = payload?.error_info ?? payload?.errorInfo ?? [], items = Array.isArray(source) ? source : [source];
+  for (const info of items) {
+    const code = Number(info?.error_code ?? info?.errorCode ?? 0);
+    if (code === 0 || code === 1) continue;
+    return firstText(info, ["error_description", "error_message", "message", "detail"]) || `SWIM API\u30A8\u30E9\u30FC\uFF08${code}\uFF09`;
+  }
+  return null;
 }
 function textFrom(value) {
   if (typeof value === "string") return value.trim();
