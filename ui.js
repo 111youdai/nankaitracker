@@ -355,6 +355,35 @@ function canRenderAtRawStation(
     const stationId =
         Number(rawStationId);
 
+    const hasSembokuPosition = [
+        train?.station_id,
+        train?.next_station_id
+    ].some(value => {
+        const id = Number(value);
+        return id >= 151 && id <= 156;
+    });
+
+    const sembokuService =
+        typeof window.isSembokuService ===
+            "function" &&
+        window.isSembokuService(train);
+
+    // 泉北線内の列車に高野線側の異常な次駅IDが混ざることがある。
+    // その場合は次駅IDを信じて沢ノ町などへ置かず、泉北線表示だけに残す。
+    if (
+        mode === "koya" &&
+        sembokuService &&
+        hasSembokuPosition
+    ) {
+        console.warn(
+            "泉北線内列車の高野線誤配置を抑止",
+            train.train_number,
+            train.station_id,
+            train.next_station_id
+        );
+        return false;
+    }
+
     if (
         (mode === "koya" || mode === "semboku") &&
         stationId >= 151 &&
@@ -555,6 +584,9 @@ function showTrains(
             ? `<div class="train-irregular-badge">定期外</div>`
             : "";
 
+        const destinationName =
+            getLiveDestinationName(train);
+
         trainElement.innerHTML = `
             ${irregularBadge}
             ${getDelayMinutes(train) > 0 ? `<div class="train-delay${getDelayMinutes(train) >= 10 ? ' severe' : ''}">${escapeHtml(getDelayMinutes(train))}分遅れ</div>` : ''}
@@ -562,6 +594,12 @@ function showTrains(
             <div class="train-kind">
                 ${escapeHtml(kindInfo.trainType)}
             </div>
+
+            ${destinationName ? `
+                <div class="train-destination">
+                    ${escapeHtml(destinationName)}行き
+                </div>
+            ` : ""}
 
             <div class="train-number">
                 ${escapeHtml(train.train_number)}
@@ -639,6 +677,48 @@ function getDelayMinutes(train) {
         0
     );
     return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function getLiveDestinationName(train) {
+    if (
+        typeof window.getTrainDestinationName !==
+        "function"
+    ) {
+        return "";
+    }
+
+    return window.getTrainDestinationName(
+        train?.line_id,
+        train?.destination_station_id
+    );
+}
+
+function normalizeDestinationName(value) {
+    return String(value || "")
+        .trim()
+        .replace(/駅$/u, "")
+        .replaceAll("難波", "なんば")
+        .replaceAll("住ノ江", "住之江")
+        .replaceAll("信号所", "信号場")
+        .replace(/[\s　・]/gu, "");
+}
+
+function getDestinationState(train, detail = null) {
+    const live = getLiveDestinationName(train);
+    const scheduled = String(
+        detail?.arrival_station_name || ""
+    ).trim();
+
+    return {
+        live,
+        scheduled,
+        changed: Boolean(
+            live &&
+            scheduled &&
+            normalizeDestinationName(live) !==
+                normalizeDestinationName(scheduled)
+        )
+    };
 }
 
 function getDoorText(train) {
@@ -796,9 +876,15 @@ function renderTrainDetail({
     const arrival =
         detail?.arrival_station_name;
 
+    const destinationState =
+        getDestinationState(train, detail);
+
+    const currentArrival =
+        destinationState.live || arrival;
+
     const section =
-        departure && arrival
-            ? `${departure} → ${arrival}`
+        departure && currentArrival
+            ? `${departure} → ${currentArrival}`
             : kindInfo.section;
 
     const positionText =
@@ -839,6 +925,19 @@ function renderTrainDetail({
             `
             : "";
 
+    const destinationHtml =
+        destinationState.live
+            ? `
+                <div class="detail-destination${destinationState.changed ? " changed" : ""}">
+                    <strong>${destinationState.changed ? "行先変更" : "現在の行先"}</strong>
+                    <span>${escapeHtml(destinationState.live)}行き</span>
+                    ${destinationState.changed ? `
+                        <small>通常は${escapeHtml(destinationState.scheduled)}行き</small>
+                    ` : ""}
+                </div>
+            `
+            : "";
+
     const stationTable =
         createStationTable(detail);
 
@@ -848,6 +947,8 @@ function renderTrainDetail({
         </h2>
 
         ${irregularHtml}
+
+        ${destinationHtml}
 
         ${warningHtml}
 
@@ -859,7 +960,7 @@ function renderTrainDetail({
         <p><b>系統判定</b></p>
         <p>${escapeHtml(routeName)}</p>
 
-        <p><b>運転区間</b></p>
+        <p><b>${destinationState.changed ? "現在の運転区間" : "運転区間"}</b></p>
         <p>${escapeHtml(section)}</p>
 
         ${getFormationDetailHtml(
@@ -891,7 +992,7 @@ function renderTrainDetail({
     `;
 }
 
-async function openDetail(train) {
+async function openDetail(train, options = {}) {
     const panel =
         document.getElementById(
             "detailPanel"
@@ -914,6 +1015,7 @@ async function openDetail(train) {
     const closeDetail = () => {
         panel.classList.remove("open");
         document.body.classList.remove("detail-open");
+        window.activeTrainDetailNumber = null;
     };
 
     if (closeButton) closeButton.onclick = closeDetail;
@@ -926,13 +1028,17 @@ async function openDetail(train) {
 
     panel.classList.add("open");
     document.body.classList.add("detail-open");
+    window.activeTrainDetailNumber =
+        String(train.train_number || "");
 
-    content.innerHTML = `
-        <h2>
-            🚃 ${escapeHtml(train.train_number)}列車
-        </h2>
-        <p>列車情報を取得中...</p>
-    `;
+    if (!options.background) {
+        content.innerHTML = `
+            <h2>
+                🚃 ${escapeHtml(train.train_number)}列車
+            </h2>
+            <p>列車情報を取得中...</p>
+        `;
+    }
 
     try {
         const detail =
@@ -972,4 +1078,5 @@ window.openTrainDetail = openDetail;
 window.closeTrainDetail = () => {
     document.getElementById("detailPanel")?.classList.remove("open");
     document.body.classList.remove("detail-open");
+    window.activeTrainDetailNumber = null;
 };

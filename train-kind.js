@@ -1,11 +1,36 @@
 import {
     TRAIN_KINDS,
     NANKAI_TRAIN_KINDS,
-    KOYA_TRAIN_KINDS
+    KOYA_TRAIN_KINDS,
+    NANKAI_DESTINATION_STATIONS,
+    KOYA_DESTINATION_STATIONS
 } from "./constants.js";
 
 const SEMBOKU_STATION_IDS =
     new Set([151, 152, 153, 154, 155, 156]);
+
+export function getTrainDestinationName(
+    lineId,
+    destinationStationId
+) {
+    if (
+        destinationStationId === undefined ||
+        destinationStationId === null
+    ) {
+        return "";
+    }
+
+    const destinations =
+        Number(lineId) === 1
+            ? NANKAI_DESTINATION_STATIONS
+            : KOYA_DESTINATION_STATIONS;
+
+    return String(
+        destinations[String(destinationStationId)]
+            ?.destination_name ||
+        ""
+    ).trim();
+}
 
 function toPositiveIntegers(values) {
     if (!Array.isArray(values)) {

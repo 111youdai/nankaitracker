@@ -2,6 +2,7 @@ import {
     getTrainKindByNumber,
     getTrainKindById,
     resolveTrainKind,
+    getTrainDestinationName,
     isSembokuService,
     isLimitedExpressTrain,
     canPlaceOnSemboku,
@@ -17,6 +18,7 @@ import { renderSpecialPatterns } from "./special-patterns.mjs?v=20261116c";
 window.getTrainKindByNumber = getTrainKindByNumber;
 window.getTrainKindById = getTrainKindById;
 window.resolveTrainKind = resolveTrainKind;
+window.getTrainDestinationName = getTrainDestinationName;
 window.isSembokuService = isSembokuService;
 window.isLimitedExpressTrain = isLimitedExpressTrain;
 window.canPlaceOnSemboku = canPlaceOnSemboku;
@@ -44,6 +46,8 @@ const appState = {
 };
 let refreshLabelResetTimer = null;
 let fleetSource = "nankai";
+let currentAppView = "home";
+let liveRefreshInFlight = false;
 
 function range(start, end) {
     return Array.from(
@@ -274,6 +278,63 @@ function renderMode(mode) {
 
 }
 
+function updateTrainBaseTimes(trainData) {
+    window.koyaBaseTime =
+        trainData.koya_update_time ||
+        trainData.nankai_update_time ||
+        "00:00:00";
+
+    window.nankaiBaseTime =
+        trainData.nankai_update_time ||
+        trainData.koya_update_time ||
+        "00:00:00";
+}
+
+async function refreshLiveTrainData() {
+    if (
+        liveRefreshInFlight ||
+        document.hidden ||
+        currentAppView !== "route" ||
+        window.activeLineMode === MODE_TENHAMA
+    ) {
+        return;
+    }
+
+    liveRefreshInFlight = true;
+
+    try {
+        const trainData = await getTrainData();
+        appState.trainData = trainData;
+        updateTrainBaseTimes(trainData);
+        renderMode(window.activeLineMode || MODE_NANKAI);
+
+        const activeTrainNumber =
+            window.activeTrainDetailNumber;
+
+        if (activeTrainNumber) {
+            const latestTrain =
+                (trainData.trains || []).find(train =>
+                    String(train.train_number) ===
+                    String(activeTrainNumber)
+                );
+
+            if (latestTrain) {
+                void window.openTrainDetail?.(
+                    latestTrain,
+                    { background: true }
+                );
+            }
+        }
+    } catch (error) {
+        console.warn(
+            "列車位置の自動更新に失敗しました",
+            error
+        );
+    } finally {
+        liveRefreshInFlight = false;
+    }
+}
+
 async function requestMode(mode) {
     renderMode(LINE_MODES.has(mode) ? mode : MODE_NANKAI);
     return true;
@@ -349,15 +410,7 @@ async function loadApp() {
             cloudState.innerHTML = "<i></i>位置情報を取得済み";
         }
 
-        window.koyaBaseTime =
-            trainData.koya_update_time ||
-            trainData.nankai_update_time ||
-            "00:00:00";
-
-        window.nankaiBaseTime =
-            trainData.nankai_update_time ||
-            trainData.koya_update_time ||
-            "00:00:00";
+        updateTrainBaseTimes(trainData);
 
         const hashMode =
             location.hash.replace("#", "");
@@ -758,6 +811,7 @@ function setAppView(view, updateHistory = true) {
     const normalizedView = protectedView && !window.canViewTrackerRecords?.()
         ? "home"
         : requestedView;
+    currentAppView = normalizedView;
     const home = document.getElementById("home");
     const route = document.getElementById("routeWorkspace");
     const records = document.getElementById("recordsWorkspace");
@@ -961,3 +1015,11 @@ document.getElementById("refreshTrains")?.addEventListener(
     }
 );
 loadApp();
+window.setInterval(() => {
+    void refreshLiveTrainData();
+}, 30000);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        void refreshLiveTrainData();
+    }
+});

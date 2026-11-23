@@ -9,7 +9,8 @@ window.TRACKER_LOG_WORKER_URL =
 
 async function getTrainData() {
     const response = await fetch(
-        "https://external-data.nankaiapp.com/tid/trains.json"
+        "https://external-data.nankaiapp.com/tid/trains.json",
+        { cache: "no-store" }
     );
 
     if (!response.ok) {
